@@ -1,0 +1,96 @@
+name: Update Supported Versions
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    paths:
+      - "pyproject.toml"
+  workflow_dispatch:
+    inputs:
+      targetBranch:
+        description: "Branch to run the script on (default: develop)"
+        required: false
+        default: "develop"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.targetBranch || github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies with uv
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          uv pip install .
+
+      - name: Run update script
+        run: |
+          source .venv/bin/activate
+          python scripts/update-readme-version.py ${{ github.event.inputs.targetBranch || github.ref_name }}
+      - name: Check for SUPPORTED_VERSIONS changes
+        id: detect-changes
+        run: |
+          if git diff --name-only | grep -q '^SUPPORTED_VERSIONS\.json$'; then
+            echo "SUPPORTED_VERSIONS.json changed."
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes to SUPPORTED_VERSIONS.json. Skipping remainder of workflow."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update develop versions
+        if: ${{ steps.detect-changes.outputs.changed == 'true' && (github.event.inputs.targetBranch || github.ref_name) == 'develop' }}
+        id: get-develop-version
+        run: |
+          # Run the script and capture its output
+          output=$(bash scripts/pre-commit/update_develop_version.sh)
+          # Extract the last line which contains the version
+          version=$(echo "$output" | tail -n 1)
+          # Set the version as an output parameter for later steps
+          echo "version=$version" >> $GITHUB_OUTPUT
+          # Debug info
+          echo "Script output: $output"
+          echo "Captured Version: $version"
+
+      - name: Create Pull Request
+        if: ${{ steps.detect-changes.outputs.changed == 'true' }}
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: Update SUPPORTED_VERSIONS.json
+          title: "Update SUPPORTED_VERSIONS.json for ${{ steps.get-develop-version.outputs.version || github.event.inputs.targetBranch || github.ref_name }}"
+          branch: update-supported-versions-${{ github.event.inputs.targetBranch || github.ref_name }}
+          base: develop
+          body: "This PR updates the SUPPORTED_VERSIONS.json to reflect new versions."
+
+      - name: Approve the Pull Request
+        if: ${{ steps.create-pr.outputs.pull-request-number }}
+        run: gh pr review ${{ steps.create-pr.outputs.pull-request-number }} --approve
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge the Pull Request
+        if: ${{ steps.create-pr.outputs.pull-request-number }}
+        run: gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

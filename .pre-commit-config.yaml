@@ -1,56 +1,40 @@
 ---
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        exclude: ^desktop/tauri/src-tauri/tauri\.conf\.json$
       - id: check-merge-conflict
       - id: check-json
       - id: check-yaml
-      - id: debug-statements
-      - id: requirements-txt-fixer
       - id: check-added-large-files
+        args: [--maxkb=600]
       - id: fix-byte-order-marker
-      - id: fix-encoding-pragma
-        args: [--remove]
       - id: pretty-format-json
         args: [--autofix, --indent, '4', --no-sort-keys]
-  - repo: https://github.com/hhatto/autopep8
-    rev: v2.0.4
-    hooks:
-      - id: autopep8
+        exclude: ^desktop/tauri/src-tauri/tauri\.conf\.json$
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.33.0  # or higher tag
+    rev: v1.37.1  # or higher tag
     hooks:
       - id: yamllint
         args: [--format, parsable, --strict]
         exclude: ^.github/
   - repo: https://github.com/lyz-code/yamlfix
-    rev: 1.16.0
+    rev: 1.19.0
     hooks:
       - id: yamlfix
         exclude: ^.github/
-  - repo: https://github.com/asottile/reorder-python-imports
-    rev: v3.12.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.14.6
     hooks:
-      - id: reorder-python-imports
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
-    hooks:
-      - id: pyupgrade
-        args: [--py3-plus]
-  - repo: https://github.com/psf/black
-    rev: 23.12.1
-    hooks:
-      - id: black
-        language_version: python3
-        args: [--line-length, '130']
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        args: [--config=.flake8]
+      # Run the linter.
+      - id: ruff-check
+        args: [--fix]
+      # Run the formatter.
+      - id: ruff-format
   - repo: local
     hooks:
       - id: increase-version
@@ -58,4 +42,4 @@ repos:
         entry: ./scripts/pre-commit/increase_version.sh
         language: script
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]

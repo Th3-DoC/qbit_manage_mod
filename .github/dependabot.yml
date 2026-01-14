@@ -9,13 +9,23 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+      time: "07:00"
+      timezone: "America/Toronto"
     target-branch: "develop"
     assignees:
       - "bobokun"
+    # Specify the file to check for dependencies
+    # Dependabot will now look at pyproject.toml instead of requirements.txt
+    allow:
+      - dependency-type: "direct"
+    # Specify the file to update
+    versioning-strategy: increase-if-necessary
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
-      interval: daily
+      interval: "daily"
+      time: "07:00"
+      timezone: "America/Toronto"
     assignees:
       - "bobokun"
     target-branch: "develop"

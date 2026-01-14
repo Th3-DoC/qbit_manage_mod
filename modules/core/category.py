@@ -1,50 +1,53 @@
-from qbittorrentapi import Conflict409Error
+import time
 
 from modules import util
+from modules.qbit_error_handler import handle_qbit_api_errors
 
 logger = util.logger
 
 
 class Category:
-    def __init__(self, qbit_manager):
+    def __init__(self, qbit_manager, hashes: list[str] = None):
         self.qbt = qbit_manager
         self.config = qbit_manager.config
+        self.hashes = hashes
         self.client = qbit_manager.client
         self.stats = 0
         self.torrents_updated = []  # List of torrents updated
         self.notify_attr = []  # List of single torrent attributes to send to notifiarr
         self.uncategorized_mapping = "Uncategorized"
-
+        self.status_filter = "completed" if self.config.settings["cat_filter_completed"] else "all"
+        self.cat_update_all = self.config.settings["cat_update_all"]
         self.category()
+        self.change_categories()
         self.config.webhooks_factory.notify(self.torrents_updated, self.notify_attr, group_by="category")
 
     def category(self):
-        #
-        # EDIT filter for inComplete torrents
-        #
-        filter = "completed"
-        if self.config.cat_handle_dl:
-            filter = "all"
-        #
-        #
-        #
         """Update category for torrents that don't have any category defined and returns total number categories updated"""
+        start_time = time.time()
         logger.separator("Updating Categories", space=False, border=False)
-        torrent_list = self.qbt.get_torrents({"category": "", "status_filter": filter})  # Filter added here ###
+        torrent_list_filter = {"status_filter": self.status_filter}
+        if self.hashes:
+            torrent_list_filter["torrent_hashes"] = self.hashes
+        if not self.cat_update_all and not self.hashes:
+            torrent_list_filter["category"] = ""
+        torrent_list = self.qbt.get_torrents(torrent_list_filter)
         for torrent in torrent_list:
-            new_cat = self.get_tracker_cat(torrent) or self.qbt.get_category(torrent.save_path)
-            if new_cat == self.uncategorized_mapping:
-                logger.print_line(f"{torrent.name} remains uncategorized.", self.config.loglevel)
+            torrent_category = torrent.category
+            new_cat = []
+            new_cat.extend(self.get_tracker_cat(torrent) or self.qbt.get_category(torrent.save_path))
+            if not torrent.auto_tmm and torrent_category:
+                logger.print_line(
+                    f"{torrent.name} has Automatic Torrent Management disabled and already has the category"
+                    f" {torrent_category}. Skipping..",
+                    "DEBUG",
+                )
                 continue
-            self.update_cat(torrent, new_cat, False)
-
-        # Change categories
-        if self.config.cat_change:
-            for old_cat in self.config.cat_change:
-                torrent_list = self.qbt.get_torrents({"category": old_cat, "status_filter": "completed"})
-                for torrent in torrent_list:
-                    new_cat = self.config.cat_change[old_cat]
-                    self.update_cat(torrent, new_cat, True)
+            if new_cat[0] == self.uncategorized_mapping:
+                logger.print_line(f"{torrent.name} remains uncategorized.", "DEBUG")
+                continue
+            if torrent_category not in new_cat:
+                self.update_cat(torrent, new_cat[0], False)
 
         if self.stats >= 1:
             logger.print_line(
@@ -53,28 +56,69 @@ class Category:
         else:
             logger.print_line("No new torrents to categorize.", self.config.loglevel)
 
+        end_time = time.time()
+        duration = end_time - start_time
+        logger.debug(f"Category command completed in {duration:.2f} seconds")
+
+    def change_categories(self):
+        """Handle category changes separately after main categorization"""
+        if not self.config.cat_change:
+            return
+
+        logger.separator("Changing Categories", space=False, border=False)
+        start_time = time.time()
+
+        for torrent_category, updated_cat in self.config.cat_change.items():
+            # Get torrents with the specific category to be changed
+            torrent_list_filter = {"status_filter": self.status_filter, "category": torrent_category}
+            if self.hashes:
+                torrent_list_filter["torrent_hashes"] = self.hashes
+
+            torrent_list = self.qbt.get_torrents(torrent_list_filter)
+
+            for torrent in torrent_list:
+                self.update_cat(torrent, updated_cat, True)
+
+        end_time = time.time()
+        duration = end_time - start_time
+        logger.debug(f"Category change command completed in {duration:.2f} seconds")
+
     def get_tracker_cat(self, torrent):
-        tracker = self.qbt.get_tags(torrent.trackers)
-        return tracker["cat"]
+        tracker = self.qbt.get_tags(self.qbt.get_tracker_urls(torrent.trackers))
+        return [tracker["cat"]] if tracker["cat"] else None
 
     def update_cat(self, torrent, new_cat, cat_change):
         """Update category based on the torrent information"""
-        tracker = self.qbt.get_tags(torrent.trackers)
+        tracker = self.qbt.get_tags(self.qbt.get_tracker_urls(torrent.trackers))
         t_name = torrent.name
         old_cat = torrent.category
         if not self.config.dry_run:
-            try:
-                torrent.set_category(category=new_cat)
-                if torrent.auto_tmm is False and self.config.settings["force_auto_tmm"]:
-                    torrent.set_auto_management(True)
-            except Conflict409Error:
-                ex = logger.print_line(
-                    f'Existing category "{new_cat}" not found for save path {torrent.save_path}, category will be created.',
-                    self.config.loglevel,
-                )
-                self.config.notify(ex, "Update Category", False)
-                self.client.torrent_categories.create_category(name=new_cat, save_path=torrent.save_path)
-                torrent.set_category(category=new_cat)
+
+            @handle_qbit_api_errors(context="set_category", retry_attempts=2)
+            def set_category_with_creation():
+                try:
+                    torrent.set_category(category=new_cat)
+                    if (
+                        torrent.auto_tmm is False
+                        and self.config.settings["force_auto_tmm"]
+                        and not any(tag in torrent.tags for tag in self.config.settings.get("force_auto_tmm_ignore_tags", []))
+                    ):
+                        torrent.set_auto_management(True)
+                except Exception as e:
+                    # Check if it's a category creation issue
+                    if "not found" in str(e).lower() or "409" in str(e):
+                        ex = logger.print_line(
+                            f'Existing category "{new_cat}" not found for save path '
+                            f"{torrent.save_path}, category will be created.",
+                            self.config.loglevel,
+                        )
+                        self.config.notify(ex, "Update Category", False)
+                        self.client.torrent_categories.create_category(name=new_cat, save_path=torrent.save_path)
+                        torrent.set_category(category=new_cat)
+                    else:
+                        raise
+
+            set_category_with_creation()
         body = []
         body += logger.print_line(logger.insert_space(f"Torrent Name: {t_name}", 3), self.config.loglevel)
         if cat_change:
@@ -83,7 +127,7 @@ class Category:
         else:
             title = "Updating Categories"
         body += logger.print_line(logger.insert_space(f"New Category: {new_cat}", 3), self.config.loglevel)
-        body += logger.print_line(logger.insert_space(f'Tracker: {tracker["url"]}', 8), self.config.loglevel)
+        body += logger.print_line(logger.insert_space(f"Tracker: {tracker['url']}", 8), self.config.loglevel)
         attr = {
             "function": "cat_update",
             "title": title,

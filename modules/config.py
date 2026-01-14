@@ -1,27 +1,25 @@
 """Config class for qBittorrent-Manage"""
+
 import os
 import re
 import stat
 import time
-from collections import OrderedDict
 
 import requests
 from retrying import retry
 
 from modules import util
 from modules.apprise import Apprise
-from modules.bhd import BeyondHD
 from modules.notifiarr import Notifiarr
 from modules.qbittorrent import Qbt
-from modules.util import check
-from modules.util import Failed
 from modules.util import YAML
+from modules.util import Failed
+from modules.util import check
 from modules.webhooks import Webhooks
 
 logger = util.logger
 
 COMMANDS = [
-    "cross_seed",
     "recheck",
     "cat_update",
     "tag_update",
@@ -40,15 +38,14 @@ class Config:
     """Config class for qBittorrent-Manage"""
 
     def __init__(self, default_dir, args):
-        logger.info("Locating config...")
         self.args = args
-        config_file = args["config_file"]
-        if config_file and os.path.exists(config_file):
-            self.config_path = os.path.abspath(config_file)
-        elif config_file and os.path.exists(os.path.join(default_dir, config_file)):
-            self.config_path = os.path.abspath(os.path.join(default_dir, config_file))
-        elif config_file and not os.path.exists(config_file):
-            raise Failed(f"Config Error: config not found at {os.path.abspath(config_file)}")
+        self.config_file = args["config_file"]
+        if self.config_file and os.path.exists(self.config_file):
+            self.config_path = os.path.abspath(self.config_file)
+        elif self.config_file and os.path.exists(os.path.join(default_dir, self.config_file)):
+            self.config_path = os.path.abspath(os.path.join(default_dir, self.config_file))
+        elif self.config_file and not os.path.exists(self.config_file):
+            raise Failed(f"Config Error: config not found at {os.path.abspath(self.config_file)}")
         elif os.path.exists(os.path.join(default_dir, "config.yml")):
             self.config_path = os.path.abspath(os.path.join(default_dir, "config.yml"))
         else:
@@ -57,15 +54,58 @@ class Config:
 
         self.util = check(self)
         self.default_dir = default_dir
-        self.start_time = args["time_obj"]
+        self.start_time = self.args["time_obj"]
 
         loaded_yaml = YAML(self.config_path)
         self.data = loaded_yaml.data
 
-        # Replace env variables with config commands
-        if "commands" in self.data:
+        self.load_config()
+        self.configure_qbt()
+
+    def load_config(self):
+        """
+        Loads and processes the configuration settings for the application.
+        """
+        self.commands = self.process_config_commands()
+        self.data = self.process_config_data()
+        self.process_config_settings()
+        self.process_config_webhooks()
+        self.cat_change = self.data["cat_change"] if "cat_change" in self.data else {}
+        self.process_config_apprise()
+        self.process_config_notifiarr()
+        self.process_config_all_webhooks()
+        self.validate_required_sections()
+        self.process_config_nohardlinks()
+        self.process_config_share_limits()
+        self.processs_config_recyclebin()
+        self.process_config_directories()
+        self.process_config_orphaned()
+
+    def configure_qbt(self):
+        """
+        Configure qBittorrent client settings based on the loaded configuration data.
+        This method initializes the qBittorrent client with the necessary settings.
+        """
+        # Connect to Qbittorrent
+        self.qbt = None
+        if "qbt" in self.data:
+            self.qbt = self.__connect()
+        else:
+            e = "Config Error: qbt attribute not found"
+            self.notify(e, "Config")
+            raise Failed(e)
+
+    def process_config_commands(self):
+        """
+        Process and log command settings from either config file or environment variables.
+        """
+        # Check if request is from web API
+        self.web_api_enabled = self.args.get("_from_web_api", False)
+
+        # Determine source of commands (config file or args)
+        if "commands" in self.data and not self.web_api_enabled:
             if self.data["commands"] is not None:
-                logger.info(f"Commands found in {config_file}, ignoring env variables and using config commands instead.")
+                logger.info(f"Commands found in {self.config_file}, ignoring env variables and using config commands instead.")
                 self.commands = {}
                 for command in COMMANDS:
                     self.commands[command] = self.util.check_for_attribute(
@@ -76,29 +116,90 @@ class Config:
                         default=False,
                         save=True,
                     )
-                logger.debug(f"    --cross-seed (QBT_CROSS_SEED): {self.commands['cross_seed']}")
-                logger.debug(f"    --recheck (QBT_RECHECK): {self.commands['recheck']}")
-                logger.debug(f"    --cat-update (QBT_CAT_UPDATE): {self.commands['cat_update']}")
-                logger.debug(f"    --tag-update (QBT_TAG_UPDATE): {self.commands['tag_update']}")
-                logger.debug(f"    --rem-unregistered (QBT_REM_UNREGISTERED): {self.commands['rem_unregistered']}")
-                logger.debug(f"    --tag-tracker-error (QBT_TAG_TRACKER_ERROR): {self.commands['tag_tracker_error']}")
-                logger.debug(f"    --rem-orphaned (QBT_REM_ORPHANED): {self.commands['rem_orphaned']}")
-                logger.debug(f"    --tag-nohardlinks (QBT_TAG_NOHARDLINKS): {self.commands['tag_nohardlinks']}")
-                logger.debug(f"    --share-limits (QBT_SHARE_LIMITS): {self.commands['share_limits']}")
-                logger.debug(f"    --skip-cleanup (QBT_SKIP_CLEANUP): {self.commands['skip_cleanup']}")
-                logger.debug(f"    --skip-qb-version-check (QBT_SKIP_QB_VERSION_CHECK): {self.commands['skip_qb_version_check']}")
-                logger.debug(f"    --dry-run (QBT_DRY_RUN): {self.commands['dry_run']}")
+                # For logging, we'll still use args
+                command_source = "CONFIG OVERRIDE RUN COMMANDS"
+            else:
+                self.commands = self.args
+                command_source = "DOCKER ENV RUN COMMANDS"
         else:
-            self.commands = args
+            self.commands = self.args
+            command_source = "WEB API RUN COMMANDS"
 
-        if "qbt" in self.data:
-            self.data["qbt"] = self.data.pop("qbt")
-        self.data["settings"] = self.data.pop("settings") if "settings" in self.data else {}
-        if "directory" in self.data:
-            self.data["directory"] = self.data.pop("directory")
-        self.data["cat"] = self.data.pop("cat") if "cat" in self.data else {}
-        if "cat_change" in self.data:
-            self.data["cat_change"] = self.data.pop("cat_change")
+        # Log Docker env commands (same regardless of source)
+        logger.separator("DOCKER ENV COMMANDS", loglevel="DEBUG")
+        logger.debug(f"    --run (QBT_RUN): {self.args['run']}")
+        logger.debug(f"    --schedule (QBT_SCHEDULE): {self.args['sch']}")
+        logger.debug(f"    --startup-delay (QBT_STARTUP_DELAY): {self.args['startupDelay']}")
+        logger.debug(f"    --config-dir (QBT_CONFIG_DIR): {self.args['config_dir_args']}")
+        if self.args["config_dir_args"] is None:
+            logger.debug(f"    --config-file (QBT_CONFIG): {self.args['config_files']} (legacy)")
+        else:
+            logger.debug(f"    Configs found from QBT_CONFIG_DIR: {self.args['config_files']}")
+        logger.debug(f"    --log-file (QBT_LOGFILE): {self.args['log_file']}")
+        logger.debug(f"    --log-level (QBT_LOG_LEVEL): {self.args['log_level']}")
+        logger.debug(f"    --log-size (QBT_LOG_SIZE): {self.args['log_size']}")
+        logger.debug(f"    --log-count (QBT_LOG_COUNT): {self.args['log_count']}")
+        logger.debug(f"    --divider (QBT_DIVIDER): {self.args['divider']}")
+        logger.debug(f"    --width (QBT_WIDTH): {self.args['screen_width']}")
+        logger.debug(f"    --debug (QBT_DEBUG): {self.args['debug']}")
+        logger.debug(f"    --trace (QBT_TRACE): {self.args['trace']}")
+        logger.debug(f"    --web-server (QBT_WEB_SERVER): {self.args['web_server']}")
+        logger.debug(f"    --port (QBT_PORT): {self.args['port']}")
+        logger.debug(f"    --base-url (QBT_BASE_URL): {self.args['base_url']}")
+        logger.debug(f"    --host (QBT_HOST): {self.args['host']}")
+
+        # Log run commands (which may come from config or env)
+        logger.separator(command_source, space=False, border=False, loglevel="DEBUG")
+        logger.debug(f"    --recheck (QBT_RECHECK): {self.commands['recheck']}")
+        logger.debug(f"    --cat-update (QBT_CAT_UPDATE): {self.commands['cat_update']}")
+        logger.debug(f"    --tag-update (QBT_TAG_UPDATE): {self.commands['tag_update']}")
+        logger.debug(f"    --rem-unregistered (QBT_REM_UNREGISTERED): {self.commands['rem_unregistered']}")
+        logger.debug(f"    --tag-tracker-error (QBT_TAG_TRACKER_ERROR): {self.commands['tag_tracker_error']}")
+        logger.debug(f"    --rem-orphaned (QBT_REM_ORPHANED): {self.commands['rem_orphaned']}")
+        logger.debug(f"    --tag-nohardlinks (QBT_TAG_NOHARDLINKS): {self.commands['tag_nohardlinks']}")
+        logger.debug(f"    --share-limits (QBT_SHARE_LIMITS): {self.commands['share_limits']}")
+        logger.debug(f"    --skip-cleanup (QBT_SKIP_CLEANUP): {self.commands['skip_cleanup']}")
+        logger.debug(f"    --skip-qb-version-check (QBT_SKIP_QB_VERSION_CHECK): {self.commands['skip_qb_version_check']}")
+        logger.debug(f"    --dry-run (QBT_DRY_RUN): {self.commands['dry_run']}")
+        logger.separator(loglevel="DEBUG")
+
+        return self.commands
+
+    def process_config_data(self):
+        """
+        Process configuration data by normalizing structure and handling special cases.
+        Transforms configuration data into the expected internal format.
+        """
+        # Handle section renames and ensure all required sections exist
+        section_mappings = {
+            "qbt": "qbt",
+            "settings": "settings",
+            "directory": "directory",
+            "cat": "cat",
+            "cat_change": "cat_change",
+            "nohardlinks": "nohardlinks",
+            "recyclebin": "recyclebin",
+            "orphaned": "orphaned",
+            "apprise": "apprise",
+            "notifiarr": "notifiarr",
+            "share_limits": "share_limits",
+        }
+
+        # Ensure settings section exists
+        if "settings" not in self.data:
+            self.data["settings"] = {}
+
+        # Ensure cat section exists
+        if "cat" not in self.data:
+            self.data["cat"] = {}
+
+        # Process each standard section
+        for target_key, source_key in section_mappings.items():
+            if source_key in self.data:
+                if target_key != source_key:  # Only pop if renaming is needed
+                    self.data[target_key] = self.data.pop(source_key)
+
+        # Process tracker section with special handling for pipe-separated URLs
         if "tracker" in self.data:
             trackers = self.data.pop("tracker")
             self.data["tracker"] = {}
@@ -108,23 +209,16 @@ class Config:
                     self.data["tracker"][tracker_url.strip()] = data
         else:
             self.data["tracker"] = {}
-        if "nohardlinks" in self.data:
-            self.data["nohardlinks"] = self.data.pop("nohardlinks")
-        if "recyclebin" in self.data:
-            self.data["recyclebin"] = self.data.pop("recyclebin")
-        if "orphaned" in self.data:
-            self.data["orphaned"] = self.data.pop("orphaned")
-        if "apprise" in self.data:
-            self.data["apprise"] = self.data.pop("apprise")
-        if "notifiarr" in self.data:
-            self.data["notifiarr"] = self.data.pop("notifiarr")
+
+        # Process webhooks with special handling for function hooks
         if "webhooks" in self.data:
             temp = self.data.pop("webhooks")
             if temp is not None:
                 if "function" not in temp or ("function" in temp and temp["function"] is None):
                     temp["function"] = {}
 
-                def hooks(attr):
+                # Helper function to process each webhook function type
+                def process_hook(attr):
                     if attr in temp:
                         items = temp.pop(attr)
                         if items:
@@ -133,24 +227,67 @@ class Config:
                         temp["function"][attr] = {}
                         temp["function"][attr] = None
 
-                hooks("cross_seed")
-                hooks("recheck")
-                hooks("cat_update")
-                hooks("tag_update")
-                hooks("rem_unregistered")
-                hooks("rem_orphaned")
-                hooks("tag_nohardlinks")
-                hooks("cleanup_dirs")
-                self.data["webhooks"] = temp
-        if "bhd" in self.data:
-            self.data["bhd"] = self.data.pop("bhd")
-        if "share_limits" in self.data:
-            self.data["share_limits"] = self.data.pop("share_limits")
+                # Process all webhook function types
+                hook_types = [
+                    "recheck",
+                    "cat_update",
+                    "tag_update",
+                    "rem_unregistered",
+                    "rem_orphaned",
+                    "tag_nohardlinks",
+                    "cleanup_dirs",
+                ]
+                for hook_type in hook_types:
+                    process_hook(hook_type)
 
+                self.data["webhooks"] = temp
+
+        # Set final values from commands
         self.dry_run = self.commands["dry_run"]
         self.loglevel = "DRYRUN" if self.dry_run else "INFO"
         self.session = requests.Session()
 
+        return self.data
+
+    def validate_required_sections(self):
+        """
+        Validate that required configuration sections are present.
+        Ensures that at least one of 'cat' or 'tracker' sections is defined.
+        """
+        has_categories = "cat" in self.data and self.data["cat"] is not None and len(self.data["cat"]) > 0
+        has_trackers = "tracker" in self.data and self.data["tracker"] is not None and len(self.data["tracker"]) > 0
+
+        # Check categories section
+        if "cat" in self.data:
+            if self.data["cat"] is None or len(self.data["cat"]) == 0:
+                err = (
+                    "Config Error: Category section is not completed and is mandatory. "
+                    "Please enter all categories and save path combinations."
+                )
+                self.notify(err, "Config")
+                raise Failed(err)
+        # Check tracker section
+        if "tracker" in self.data:
+            if self.data["tracker"] is None or len(self.data["tracker"]) == 0:
+                err = "Config Error: 'Tracker section is not completed and is mandatory."
+                self.notify(err, "Config")
+                raise Failed(err)
+        if not has_categories and not has_trackers:
+            # Both sections exist but are empty (since process_config_data creates them)
+            err = (
+                "Config Error: Both 'cat' (categories) and 'tracker' sections are empty. "
+                "At least one must be defined and contain valid entries. "
+                "Categories organize torrents by save path, trackers tag torrents by tracker URL. "
+                "Please add either category definitions or tracker configurations to your config file."
+            )
+            self.notify(err, "Config")
+            raise Failed(err)
+
+    def process_config_settings(self):
+        """
+        Process settings from the configuration data.
+        This method ensures that all required settings are present and correctly formatted.
+        """
         share_limits_tag = self.data["settings"].get("share_limits_suffix_tag", "~share_limit")
         # Convert previous share_limits_suffix_tag to new default share_limits_tag
         if share_limits_tag == "share_limit":
@@ -164,86 +301,84 @@ class Config:
                 self.data, "tracker_error_tag", parent="settings", default="issue"
             ),
             "nohardlinks_tag": self.util.check_for_attribute(self.data, "nohardlinks_tag", parent="settings", default="noHL"),
+            "stalled_tag": self.util.check_for_attribute(self.data, "stalled_tag", parent="settings", default="stalledDL"),
+            "private_tag": self.util.check_for_attribute(self.data, "private_tag", parent="settings", default_is_none=True),
             "share_limits_tag": self.util.check_for_attribute(
                 self.data, "share_limits_tag", parent="settings", default=share_limits_tag
+            ),
+            "share_limits_min_seeding_time_tag": self.util.check_for_attribute(
+                self.data, "share_limits_min_seeding_time_tag", parent="settings", default="MinSeedTimeNotReached"
+            ),
+            "share_limits_min_num_seeds_tag": self.util.check_for_attribute(
+                self.data, "share_limits_min_num_seeds_tag", parent="settings", default="MinSeedsNotMet"
+            ),
+            "share_limits_last_active_tag": self.util.check_for_attribute(
+                self.data, "share_limits_last_active_tag", parent="settings", default="LastActiveLimitNotReached"
+            ),
+            "cat_filter_completed": self.util.check_for_attribute(
+                self.data, "cat_filter_completed", parent="settings", var_type="bool", default=True
+            ),
+            "share_limits_filter_completed": self.util.check_for_attribute(
+                self.data, "share_limits_filter_completed", parent="settings", var_type="bool", default=True
+            ),
+            "tag_nohardlinks_filter_completed": self.util.check_for_attribute(
+                self.data, "tag_nohardlinks_filter_completed", parent="settings", var_type="bool", default=True
+            ),
+            "rem_unregistered_filter_completed": self.util.check_for_attribute(
+                self.data, "rem_unregistered_filter_completed", parent="settings", var_type="bool", default=False
+            ),
+            "cat_update_all": self.util.check_for_attribute(
+                self.data, "cat_update_all", parent="settings", var_type="bool", default=True
+            ),
+            "force_auto_tmm_ignore_tags": self.util.check_for_attribute(
+                self.data, "force_auto_tmm_ignore_tags", parent="settings", var_type="list", default=[]
+            ),
+            "disable_qbt_default_share_limits": self.util.check_for_attribute(
+                self.data, "disable_qbt_default_share_limits", parent="settings", var_type="bool", default=True
+            ),
+            "tag_stalled_torrents": self.util.check_for_attribute(
+                self.data, "tag_stalled_torrents", parent="settings", var_type="bool", default=True
+            ),
+            "rem_unregistered_ignore_list": self.util.check_for_attribute(
+                self.data, "rem_unregistered_ignore_list", parent="settings", var_type="upper_list", default=[]
+            ),
+            "rem_unregistered_grace_minutes": self.util.check_for_attribute(
+                self.data, "rem_unregistered_grace_minutes", parent="settings", var_type="int", default=10, min_int=0
+            ),
+            "rem_unregistered_max_torrents": self.util.check_for_attribute(
+                self.data, "rem_unregistered_max_torrents", parent="settings", var_type="int", default=10, min_int=0
             ),
         }
 
         self.tracker_error_tag = self.settings["tracker_error_tag"]
         self.nohardlinks_tag = self.settings["nohardlinks_tag"]
+        self.stalled_tag = self.settings["stalled_tag"]
+        self.private_tag = self.settings["private_tag"]
         self.share_limits_tag = self.settings["share_limits_tag"]
+        self.share_limits_custom_tags = []
+        self.share_limits_min_seeding_time_tag = self.settings["share_limits_min_seeding_time_tag"]
+        self.share_limits_min_num_seeds_tag = self.settings["share_limits_min_num_seeds_tag"]
+        self.share_limits_last_active_tag = self.settings["share_limits_last_active_tag"]
 
-        default_ignore_tags = [self.nohardlinks_tag, self.tracker_error_tag, "cross-seed"]
-        self.settings["ignoreTags_OnUpdate"] = self.util.check_for_attribute(
-            self.data, "ignoreTags_OnUpdate", parent="settings", default=default_ignore_tags, var_type="list"
-        )
-        #
-        # EDIT Extra Settings added
-        #
-        self.extra_settings = {
-            "cat_handle_dl": self.util.check_for_attribute(
-                self.data, "cat_handle_dl", parent="extra_settings", var_type="bool", default=False
-            ),
-            "share_limit_handle_dl": self.util.check_for_attribute(
-                self.data, "share_limit_handle_dl", parent="extra_settings", var_type="bool", default=False
-            ),
-            "show_share_tag_priority": self.util.check_for_attribute(
-                self.data, "show_share_tag_priority", parent="extra_settings", var_type="bool", default=True
-            ),
-            "share_tag_in_group": self.util.check_for_attribute(
-                self.data, "share_tag_in_group", parent="extra_settings", var_type="bool", default=True
-            ),
-            "group_tag_suffix": self.util.check_for_attribute(
-                self.data, "group_tag_suffix", parent="extra_settings", default="~SG"
-            ),
-            "show_inactive_group": self.util.check_for_attribute(
-                self.data, "show_inactive_group", parent="extra_settings", var_type="bool", default=False
-            ),
-            "inactive_group_tag": self.util.check_for_attribute(
-                self.data, "inactive_group_tag", parent="extra_settings", default="inActivE"
-            ),
-            "show_min_seed_group": self.util.check_for_attribute(
-                self.data, "show_min_seed_group", parent="extra_settings", var_type="bool", default=True
-            ),
-            "min_seed_group_tag": self.util.check_for_attribute(
-                self.data, "min_seed_group_tag", parent="extra_settings", default="Low_SeeD's"
-            ),
-            "show_last_active_group": self.util.check_for_attribute(
-                self.data, "show_last_active_group", parent="extra_settings", var_type="bool", default=True
-            ),
-            "last_active_group_tag": self.util.check_for_attribute(
-                self.data, "last_active_group_tag", parent="extra_settings", default="ReActivateD"
-            ),
-            "show_min_seed_time_group": self.util.check_for_attribute(
-                self.data, "show_min_seed_time_group", parent="extra_settings", var_type="bool", default=True
-            ),
-            "min_seed_time_group_tag": self.util.check_for_attribute(
-                self.data, "min_seed_time_group_tag", parent="extra_settings", default="Need's_TimE"
-            ),
-        }
-
-        self.cat_handle_dl = self.extra_settings["cat_handle_dl"]
-        self.share_limit_handle_dl = self.extra_settings["share_limit_handle_dl"]
-        self.show_share_tag_priority = self.extra_settings["show_share_tag_priority"]
-        self.share_tag_in_group = self.extra_settings["share_tag_in_group"]
-        self.group_tag_suffix = self.extra_settings["group_tag_suffix"]
-        self.show_inactive_group = self.extra_settings["show_inactive_group"]
-        self.inactive_group_tag = self.extra_settings["inactive_group_tag"]
-        self.show_min_seed_group = self.extra_settings["show_min_seed_group"]
-        self.min_seed_group_tag = self.extra_settings["min_seed_group_tag"]
-        self.show_last_active_group = self.extra_settings["show_last_active_group"]
-        self.last_active_group_tag = self.extra_settings["last_active_group_tag"]
-        self.show_min_seed_time_group = self.extra_settings["show_min_seed_time_group"]
-        self.min_seed_time_group_tag = self.extra_settings["min_seed_time_group_tag"]
-        #
-        # EDIT End
-        #
-        "Migrate settings from v4.0.0 to v4.0.1 and beyond. Convert 'share_limits_suffix_tag' to 'share_limits_tag'"
+        self.default_ignore_tags = [
+            self.nohardlinks_tag,
+            self.tracker_error_tag,
+            self.share_limits_min_seeding_time_tag,
+            self.share_limits_min_num_seeds_tag,
+            self.share_limits_last_active_tag,
+            self.share_limits_tag,
+            self.private_tag,
+        ]
+        # "Migrate settings from v4.0.0 to v4.0.1 and beyond. Convert 'share_limits_suffix_tag' to 'share_limits_tag'"
         if "share_limits_suffix_tag" in self.data["settings"]:
             self.util.overwrite_attributes(self.settings, "settings")
 
+    def process_config_webhooks(self):
+        """
+        Process webhooks from the configuration data.
+        This method ensures that all required webhooks are present and correctly formatted.
+        """
         default_function = {
-            "cross_seed": None,
             "recheck": None,
             "cat_update": None,
             "tag_update": None,
@@ -270,8 +405,11 @@ class Config:
         for func in default_function:
             self.util.check_for_attribute(self.data, func, parent="webhooks", subparent="function", default_is_none=True)
 
-        self.cat_change = self.data["cat_change"] if "cat_change" in self.data else {}
-
+    def process_config_apprise(self):
+        """
+        Process the Apprise configuration data.
+        This method ensures that all required Apprise settings are present and correctly formatted.
+        """
         self.apprise_factory = None
         if "apprise" in self.data:
             if self.data["apprise"] is not None and self.data["apprise"].get("api_url") is not None:
@@ -292,6 +430,11 @@ class Config:
                     logger.error(err)
                 logger.info(f"Apprise Connection {'Failed' if self.apprise_factory is None else 'Successful'}")
 
+    def process_config_notifiarr(self):
+        """
+        Process the Notifiarr configuration data.
+        This method ensures that all required Notifiarr settings are present and correctly formatted.
+        """
         self.notifiarr_factory = None
         if "notifiarr" in self.data:
             if self.data["notifiarr"] is not None and self.data["notifiarr"].get("apikey") is not None:
@@ -310,8 +453,17 @@ class Config:
                     logger.error(err)
                 logger.info(f"Notifiarr Connection {'Failed' if self.notifiarr_factory is None else 'Successful'}")
 
+    def process_config_all_webhooks(self):
+        """
+        Process all the webhooks configuration data for any type of webhook.
+        This method ensures that all required webhooks settings are present and correctly formatted.
+        """
         self.webhooks_factory = Webhooks(
-            self, self.webhooks_factory, notifiarr=self.notifiarr_factory, apprise=self.apprise_factory
+            self,
+            self.webhooks_factory,
+            notifiarr=self.notifiarr_factory,
+            apprise=self.apprise_factory,
+            web_api_used=self.web_api_enabled,
         )
         try:
             self.webhooks_factory.start_time_hooks(self.start_time)
@@ -319,41 +471,47 @@ class Config:
             logger.stacktrace()
             logger.error(f"Webhooks Error: {err}")
 
-        self.beyond_hd = None
-        if "bhd" in self.data:
-            if self.data["bhd"] is not None and self.data["bhd"].get("apikey") is not None:
-                logger.info("Connecting to BHD API...")
-                try:
-                    self.beyond_hd = BeyondHD(
-                        self, {"apikey": self.util.check_for_attribute(self.data, "apikey", parent="bhd", throw=True)}
-                    )
-                except Failed as err:
-                    logger.error(err)
-                    self.notify(err, "BHD")
-                logger.info(f"BHD Connection {'Failed' if self.beyond_hd is None else 'Successful'}")
-
+    def process_config_nohardlinks(self):
+        """
+        Process the nohardlinks configuration data.
+        This method ensures that all required nohardlinks settings are present and correctly formatted.
+        """
         # nohardlinks
         self.nohardlinks = None
         if "nohardlinks" in self.data and self.commands["tag_nohardlinks"] and self.data["nohardlinks"] is not None:
             self.nohardlinks = {}
             for cat in self.data["nohardlinks"]:
+                if isinstance(self.data["nohardlinks"], list) and isinstance(cat, str):
+                    self.nohardlinks[cat] = {"exclude_tags": [], "ignore_root_dir": True}
+                    continue
                 if isinstance(cat, dict):
                     cat_str = list(cat.keys())[0]
-                    self.nohardlinks[cat_str] = {}
-                    exclude_tags = cat[cat_str].get("exclude_tags", [])
-                    if isinstance(exclude_tags, str):
-                        exclude_tags = [exclude_tags]
-                    self.nohardlinks[cat_str]["exclude_tags"] = exclude_tags
                 elif isinstance(cat, str):
-                    self.nohardlinks[cat] = {}
-                    self.nohardlinks[cat]["exclude_tags"] = []
+                    cat_str = cat
+                    cat = self.data["nohardlinks"]
+                if cat[cat_str] is None:
+                    cat[cat_str] = {}
+                self.nohardlinks[cat_str] = {
+                    "exclude_tags": cat[cat_str].get("exclude_tags", []),
+                    "ignore_root_dir": cat[cat_str].get("ignore_root_dir", True),
+                }
+                if self.nohardlinks[cat_str]["exclude_tags"] is None:
+                    self.nohardlinks[cat_str]["exclude_tags"] = []
+                if not isinstance(self.nohardlinks[cat_str]["ignore_root_dir"], bool):
+                    err = f"Config Error: nohardlinks category {cat_str} attribute ignore_root_dir must be a boolean type"
+                    self.notify(err, "Config")
+                    raise Failed(err)
         else:
             if self.commands["tag_nohardlinks"]:
                 err = "Config Error: nohardlinks must be a list of categories"
                 self.notify(err, "Config")
                 raise Failed(err)
 
-        # share limits
+    def process_config_share_limits(self):
+        """
+        Process the share limits configuration data.
+        This method ensures that all required share limits settings are present and correctly formatted.
+        """
         self.share_limits = None
         if "share_limits" in self.data and self.commands["share_limits"]:
 
@@ -389,10 +547,12 @@ class Config:
                             save=True,
                         )
                     priorities.add(priority)
-                return OrderedDict(sorted_limits)
+                return dict(sorted_limits)
 
-            self.share_limits = OrderedDict()
+            self.share_limits = dict()
             sorted_share_limits = _sort_share_limits(self.data["share_limits"])
+            logger.trace(f"Unsorted Share Limits: {self.data['share_limits']}")
+            logger.trace(f"Sorted Share Limits: {sorted_share_limits}")
             for group in sorted_share_limits:
                 self.share_limits[group] = {}
                 self.share_limits[group]["priority"] = sorted_share_limits[group]["priority"]
@@ -446,6 +606,26 @@ class Config:
                     do_print=False,
                     save=False,
                 )
+                self.share_limits[group]["min_torrent_size"] = self.util.check_for_attribute(
+                    self.data,
+                    "min_torrent_size",
+                    parent="share_limits",
+                    subparent=group,
+                    var_type="size_parse",
+                    default_is_none=True,
+                    do_print=False,
+                    save=False,
+                )
+                self.share_limits[group]["max_torrent_size"] = self.util.check_for_attribute(
+                    self.data,
+                    "max_torrent_size",
+                    parent="share_limits",
+                    subparent=group,
+                    var_type="size_parse",
+                    default_is_none=True,
+                    do_print=False,
+                    save=False,
+                )
                 self.share_limits[group]["cleanup"] = self.util.check_for_attribute(
                     self.data, "cleanup", parent="share_limits", subparent=group, var_type="bool", default=False, do_print=False
                 )
@@ -465,8 +645,19 @@ class Config:
                     "max_seeding_time",
                     parent="share_limits",
                     subparent=group,
-                    var_type="int",
+                    var_type="time_parse",
                     min_int=-2,
+                    default=-1,
+                    do_print=False,
+                    save=False,
+                )
+                self.share_limits[group]["max_last_active"] = self.util.check_for_attribute(
+                    self.data,
+                    "max_last_active",
+                    parent="share_limits",
+                    subparent=group,
+                    var_type="time_parse",
+                    min_int=-1,
                     default=-1,
                     do_print=False,
                     save=False,
@@ -476,7 +667,7 @@ class Config:
                     "min_seeding_time",
                     parent="share_limits",
                     subparent=group,
-                    var_type="int",
+                    var_type="time_parse",
                     min_int=0,
                     default=0,
                     do_print=False,
@@ -489,7 +680,29 @@ class Config:
                     subparent=group,
                     var_type="int",
                     min_int=-1,
+                    default=-1,
+                    do_print=False,
+                    save=False,
+                )
+                # New: throttle upload speed once share limits are reached (when cleanup is False)
+                self.share_limits[group]["upload_speed_on_limit_reached"] = self.util.check_for_attribute(
+                    self.data,
+                    "upload_speed_on_limit_reached",
+                    parent="share_limits",
+                    subparent=group,
+                    var_type="int",
+                    min_int=-1,
                     default=0,
+                    do_print=False,
+                    save=False,
+                )
+                self.share_limits[group]["enable_group_upload_speed"] = self.util.check_for_attribute(
+                    self.data,
+                    "enable_group_upload_speed",
+                    parent="share_limits",
+                    subparent=group,
+                    var_type="bool",
+                    default=False,
                     do_print=False,
                     save=False,
                 )
@@ -504,17 +717,41 @@ class Config:
                     do_print=False,
                     save=False,
                 )
-                self.share_limits[group]["last_active"] = self.util.check_for_attribute(
+                self.share_limits[group]["min_last_active"] = self.util.check_for_attribute(
                     self.data,
                     "last_active",
                     parent="share_limits",
                     subparent=group,
-                    var_type="int",
+                    var_type="time_parse",
+                    min_int=0,
+                    default=0,
+                    do_print=False,
+                    save=False,
+                ) or self.util.check_for_attribute(
+                    self.data,
+                    "min_last_active",
+                    parent="share_limits",
+                    subparent=group,
+                    var_type="time_parse",
                     min_int=0,
                     default=0,
                     do_print=False,
                     save=False,
                 )
+                if "last_active" in self.data["share_limits"][group]:
+                    self.data["share_limits"][group]["min_last_active"] = self.data["share_limits"][group].pop("last_active")
+                    self.util.overwrite_attributes(data=self.data["share_limits"][group], attribute=group, parent="share_limits")
+                    self.util.check_for_attribute(
+                        self.data,
+                        "min_last_active",
+                        parent="share_limits",
+                        subparent=group,
+                        var_type="time_parse",
+                        min_int=0,
+                        default=self.data["share_limits"][group]["min_last_active"],
+                        do_print=False,
+                        save=True,
+                    )
                 self.share_limits[group]["resume_torrent_after_change"] = self.util.check_for_attribute(
                     self.data,
                     "resume_torrent_after_change",
@@ -535,14 +772,90 @@ class Config:
                     do_print=False,
                     save=False,
                 )
+                self.share_limits[group]["custom_tag"] = self.util.check_for_attribute(
+                    self.data,
+                    "custom_tag",
+                    parent="share_limits",
+                    subparent=group,
+                    default_is_none=True,
+                    do_print=False,
+                    save=False,
+                )
+                if self.share_limits[group]["custom_tag"]:
+                    if (
+                        self.share_limits[group]["custom_tag"] not in self.share_limits_custom_tags
+                        and self.share_limits[group]["custom_tag"] not in self.default_ignore_tags
+                    ):
+                        self.share_limits_custom_tags.append(self.share_limits[group]["custom_tag"])
+                    else:
+                        err = (
+                            f"Config Error: Duplicate custom tag '{self.share_limits[group]['custom_tag']}' "
+                            f"found in share_limits for the grouping '{group}'. Custom tag must be a unique value."
+                        )
+                        self.notify(err, "Config")
+                        raise Failed(err)
+                self.share_limits[group]["reset_upload_speed_on_unmet_minimums"] = self.util.check_for_attribute(
+                    self.data,
+                    "reset_upload_speed_on_unmet_minimums",
+                    parent="share_limits",
+                    subparent=group,
+                    var_type="bool",
+                    default=True,
+                    do_print=False,
+                    save=False,
+                )
                 self.share_limits[group]["torrents"] = []
+                # Validate min/max torrent size (in bytes)
+                min_sz = self.share_limits[group]["min_torrent_size"]
+                max_sz = self.share_limits[group]["max_torrent_size"]
+                if min_sz is not None and max_sz is not None and min_sz > max_sz:
+                    err = (
+                        f"Config Error: min_torrent_size ({min_sz} bytes) is greater than "
+                        f"max_torrent_size ({max_sz} bytes) for the grouping '{group}'."
+                    )
+                    self.notify(err, "Config")
+                    raise Failed(err)
+                if (
+                    self.share_limits[group]["min_seeding_time"] > 0
+                    and self.share_limits[group]["max_seeding_time"] != -1
+                    and self.share_limits[group]["min_seeding_time"] > self.share_limits[group]["max_seeding_time"]
+                ):
+                    err = (
+                        f"Config Error: min_seeding_time ({self.share_limits[group]['min_seeding_time']}) is greater than "
+                        f"max_seeding_time ({self.share_limits[group]['max_seeding_time']}) for the grouping '{group}'.\n"
+                        f"min_seeding_time must be less than or equal to max_seeding_time or "
+                        "max_seeding_time must be unlimited (-1)."
+                    )
+                    self.notify(err, "Config")
+                    raise Failed(err)
+                if self.share_limits[group]["min_seeding_time"] > 0 and self.share_limits[group]["max_ratio"] <= 0:
+                    err = (
+                        f"Config Error: min_seeding_time ({self.share_limits[group]['min_seeding_time']}) is set, "
+                        f"but max_ratio ({self.share_limits[group]['max_ratio']}) is not set for the grouping '{group}'.\n"
+                        f"max_ratio must be greater than 0 when min_seeding_time is set."
+                    )
+                    self.notify(err, "Config")
+                    raise Failed(err)
+                if self.share_limits[group]["max_seeding_time"] > 525600:
+                    err = (
+                        f"Config Error: max_seeding_time ({self.share_limits[group]['max_seeding_time']}) cannot be set > 1 year "
+                        f"(525600 minutes) in qbitorrent. Please adjust the max_seeding_time for the grouping '{group}'."
+                    )
+                    self.notify(err, "Config")
+                    raise Failed(err)
         else:
             if self.commands["share_limits"]:
                 err = "Config Error: share_limits. No valid grouping found."
                 self.notify(err, "Config")
                 raise Failed(err)
 
-        # Add RecycleBin
+        logger.trace(f"Share_limits config: {self.share_limits}")
+
+    def processs_config_recyclebin(self):
+        """
+        Process the recycle bin configuration data.
+        This method ensures that all required recycle bin settings are present and correctly formatted.
+        """
         self.recyclebin = {}
         self.recyclebin["enabled"] = self.util.check_for_attribute(
             self.data, "enabled", parent="recyclebin", var_type="bool", default=True
@@ -557,29 +870,46 @@ class Config:
             self.data, "split_by_category", parent="recyclebin", var_type="bool", default=False
         )
 
+    def process_config_directories(self):
+        """
+        Process the directory configuration data.
+        This method ensures that all required directory settings are present and correctly formatted.
+        """
         # Assign directories
         if "directory" in self.data:
-            self.root_dir = os.path.join(
-                self.util.check_for_attribute(self.data, "root_dir", parent="directory", default_is_none=True), ""
+            root_dir = self.util.check_for_attribute(self.data, "root_dir", parent="directory", default_is_none=True)
+            if isinstance(root_dir, list):
+                root_dir = root_dir[0]
+            self.root_dir = os.path.join(root_dir, "")
+            remote_dir = self.util.check_for_attribute(
+                self.data, "remote_dir", parent="directory", default=self.root_dir, do_print=False, save=False
             )
-            self.remote_dir = os.path.join(
-                self.util.check_for_attribute(self.data, "remote_dir", parent="directory", default=self.root_dir), ""
-            )
-            if self.commands["cross_seed"] or self.commands["tag_nohardlinks"] or self.commands["rem_orphaned"]:
+            if isinstance(remote_dir, list):
+                remote_dir = remote_dir[0]
+            self.remote_dir = os.path.join(remote_dir, "")
+            if self.commands["tag_nohardlinks"] or self.commands["rem_orphaned"]:
                 self.remote_dir = self.util.check_for_attribute(
-                    self.data, "remote_dir", parent="directory", var_type="path", default=self.root_dir
+                    self.data,
+                    "remote_dir",
+                    parent="directory",
+                    var_type="path",
+                    default=self.root_dir,
+                    do_print=False,
+                    save=False,
                 )
             else:
                 if self.recyclebin["enabled"]:
                     self.remote_dir = self.util.check_for_attribute(
-                        self.data, "remote_dir", parent="directory", var_type="path", default=self.root_dir
+                        self.data,
+                        "remote_dir",
+                        parent="directory",
+                        var_type="path",
+                        default=self.root_dir,
+                        do_print=False,
+                        save=False,
                     )
-            if self.commands["cross_seed"]:
-                self.cross_seed_dir = self.util.check_for_attribute(self.data, "cross_seed", parent="directory", var_type="path")
-            else:
-                self.cross_seed_dir = self.util.check_for_attribute(
-                    self.data, "cross_seed", parent="directory", default_is_none=True
-                )
+            if not self.remote_dir:
+                self.remote_dir = self.root_dir
             if self.commands["rem_orphaned"]:
                 if "orphaned_dir" in self.data["directory"] and self.data["directory"]["orphaned_dir"] is not None:
                     default_orphaned = os.path.join(
@@ -624,6 +954,11 @@ class Config:
             self.notify(e, "Config")
             raise Failed(e)
 
+    def process_config_orphaned(self):
+        """
+        Process the orphaned data configuration.
+        This method ensures that all required orphaned data settings are present and correctly formatted.
+        """
         # Add Orphaned
         self.orphaned = {}
         self.orphaned["empty_after_x_days"] = self.util.check_for_attribute(
@@ -631,6 +966,22 @@ class Config:
         )
         self.orphaned["exclude_patterns"] = self.util.check_for_attribute(
             self.data, "exclude_patterns", parent="orphaned", var_type="list", default_is_none=True, do_print=False
+        )
+        self.orphaned["max_orphaned_files_to_delete"] = self.util.check_for_attribute(
+            self.data,
+            "max_orphaned_files_to_delete",
+            parent="orphaned",
+            var_type="int",
+            default=50,
+            min_int=-1,
+        )
+        self.orphaned["min_file_age_minutes"] = self.util.check_for_attribute(
+            self.data,
+            "min_file_age_minutes",
+            parent="orphaned",
+            var_type="int",
+            default=0,
+            min_int=0,
         )
         if self.commands["rem_orphaned"]:
             exclude_orphaned = f"**{os.sep}{os.path.basename(self.orphaned_dir.rstrip(os.sep))}{os.sep}*"
@@ -647,22 +998,29 @@ class Config:
                 else self.orphaned["exclude_patterns"]
             )
 
-        # Connect to Qbittorrent
-        self.qbt = None
-        if "qbt" in self.data:
-            logger.info("Connecting to Qbittorrent...")
-            self.qbt = Qbt(
-                self,
-                {
-                    "host": self.util.check_for_attribute(self.data, "host", parent="qbt", throw=True),
-                    "username": self.util.check_for_attribute(self.data, "user", parent="qbt", default_is_none=True),
-                    "password": self.util.check_for_attribute(self.data, "pass", parent="qbt", default_is_none=True),
-                },
-            )
-        else:
-            e = "Config Error: qbt attribute not found"
-            self.notify(e, "Config")
-            raise Failed(e)
+    def __retry_on_connect(exception):
+        return isinstance(exception.__cause__, ConnectionError)
+
+    @retry(
+        retry_on_exception=__retry_on_connect,
+        stop_max_attempt_number=5,
+        wait_exponential_multiplier=30000,
+        wait_exponential_max=120000,
+    )
+    def __connect(self):
+        logger.info("Connecting to Qbittorrent...")
+        return Qbt(
+            self,
+            {
+                "host": self.util.check_for_attribute(self.data, "host", parent="qbt", throw=True),
+                "username": self.util.check_for_attribute(
+                    self.data, "user", parent="qbt", default_is_none=True, save=False, do_print=False
+                ),
+                "password": self.util.check_for_attribute(
+                    self.data, "pass", parent="qbt", default_is_none=True, save=False, do_print=False
+                ),
+            },
+        )
 
     # Empty old files from recycle bin or orphaned
     def cleanup_dirs(self, location):
@@ -689,7 +1047,8 @@ class Config:
                         save_path = list(self.data["cat"].values())
                         cleaned_save_path = [
                             os.path.join(
-                                s.replace(self.root_dir, self.remote_dir), os.path.basename(location_path.rstrip(os.sep))
+                                util.path_replace(s, self.root_dir, self.remote_dir),
+                                os.path.basename(location_path.rstrip(os.sep)),
                             )
                             for s in save_path
                         ]
@@ -704,12 +1063,18 @@ class Config:
                         location_path_list = [location_path]
                 else:
                     location_path_list = [location_path]
-                location_files = [
-                    os.path.join(path, name)
-                    for r_path in location_path_list
-                    for path, subdirs, files in os.walk(r_path)
-                    for name in files
-                ]
+                location_files = []
+                for r_path in location_path_list:
+                    try:
+                        for path, subdirs, files in os.walk(r_path):
+                            for name in files:
+                                location_files.append(os.path.join(path, name))
+                    except PermissionError as e:
+                        logger.warning(f"Permission denied accessing directory {r_path}: {e}. Skipping this directory.")
+                        continue
+                    except OSError as e:
+                        logger.warning(f"Error accessing directory {r_path}: {e}. Skipping this directory.")
+                        continue
                 location_files = list(set(location_files))  # remove duplicates
                 location_files = sorted(location_files)
                 logger.trace(f"location_files: {location_files}")
@@ -724,12 +1089,19 @@ class Config:
                         try:
                             fileStats = os.stat(file)
                             filename = os.path.basename(file)
-                            last_modified = fileStats[stat.ST_MTIME]  # in seconds (last modified time)
+                            # in seconds (last modified time)
+                            last_modified = fileStats[stat.ST_MTIME]
                         except FileNotFoundError:
                             ex = logger.print_line(
                                 f"{location} Warning - FileNotFound: No such file or directory: {file} ", "WARNING"
                             )
                             self.notify(ex, "Cleanup Dirs", False)
+                            continue
+                        except PermissionError as e:
+                            logger.warning(f"Permission denied accessing file stats for {file}: {e}")
+                            continue
+                        except OSError as e:
+                            logger.warning(f"Error accessing file stats for {file}: {e}")
                             continue
                         now = time.time()  # in seconds
                         days = (now - last_modified) / (60 * 60 * 24)
@@ -741,14 +1113,37 @@ class Config:
                                 self.loglevel,
                             )
                             files += [str(filename)]
-                            size_bytes += os.path.getsize(file)
+                            try:
+                                size_bytes += os.path.getsize(file)
+                            except (PermissionError, OSError) as e:
+                                logger.warning(f"Could not get size for {file}: {e}")
+                                # Continue without size info
+
                             if not self.dry_run:
-                                os.remove(file)
+                                try:
+                                    os.remove(file)
+                                except PermissionError as e:
+                                    logger.warning(f"Permission denied deleting {file}: {e}. Skipping file.")
+                                    # Remove from files list since we couldn't delete it
+                                    if str(filename) in files:
+                                        files.remove(str(filename))
+                                    num_del -= 1  # Don't count this as a successful deletion
+                                    continue
+                                except OSError as e:
+                                    logger.warning(f"Error deleting {file}: {e}. Skipping file.")
+                                    # Remove from files list since we couldn't delete it
+                                    if str(filename) in files:
+                                        files.remove(str(filename))
+                                    num_del -= 1  # Don't count this as a successful deletion
+                                    continue
                         prevfolder = re.search(f".*{os.path.basename(location_path.rstrip(os.sep))}", file).group(0)
                     if num_del > 0:
                         if not self.dry_run:
                             for path in location_path_list:
-                                util.remove_empty_directories(path, "**/*")
+                                if path != location_path:
+                                    util.remove_empty_directories(path, self.qbt.get_category_save_paths())
+                            # Delete empty folders inside the location_path
+                            util.remove_empty_directories(location_path, [location_path])
                         body += logger.print_line(
                             f"{'Did not delete' if self.dry_run else 'Deleted'} {num_del} files "
                             f"({util.human_readable_size(size_bytes)}) from the {location}.",

@@ -1,4 +1,5 @@
 """Logging module"""
+
 import io
 import logging
 import os
@@ -33,7 +34,9 @@ _srcfile = os.path.normcase(fmt_filter.__code__.co_filename)
 class MyLogger:
     """Logger class"""
 
-    def __init__(self, logger_name, log_file, log_level, default_dir, screen_width, separating_character, ignore_ghost):
+    def __init__(
+        self, logger_name, log_file, log_level, default_dir, screen_width, separating_character, ignore_ghost, log_size, log_count
+    ):
         """Initialize logger"""
         self.logger_name = logger_name
         self.default_dir = default_dir
@@ -48,6 +51,8 @@ class MyLogger:
         self.config_handlers = {}
         self.secrets = set()
         self.spacing = 0
+        self.log_size = log_size
+        self.log_count = log_count
         os.makedirs(self.log_dir, exist_ok=True)
         self._logger = logging.getLogger(self.logger_name)
         logging.DRYRUN = DRYRUN
@@ -64,23 +69,34 @@ class MyLogger:
 
         self._logger.addHandler(cmd_handler)
 
+    def get_level(self):
+        """Get the current log level"""
+        return self._log_level
+
+    def set_level(self, log_level):
+        """Set the log level for the logger and all its handlers"""
+        self._log_level = getattr(logging, log_level.upper())
+        self._logger.setLevel(self._log_level)
+        for handler in self._logger.handlers:
+            handler.setLevel(self._log_level)
+
     def clear_errors(self):
         """Clear saved errors"""
         self.saved_errors = []
 
-    def _get_handler(self, log_file, count=5):
+    def _get_handler(self, log_file):
         """Get handler for log file"""
-        max_bytes = 1024 * 1024 * 10
-        _handler = RotatingFileHandler(log_file, delay=True, mode="w", maxBytes=max_bytes, backupCount=count, encoding="utf-8")
+        max_bytes = 1024 * 1024 * self.log_size
+        _handler = RotatingFileHandler(
+            log_file, delay=True, mode="w", maxBytes=max_bytes, backupCount=self.log_count, encoding="utf-8"
+        )
         self._formatter(handler=_handler)
-        # if os.path.isfile(log_file):
-        #     _handler.doRollover()
         return _handler
 
     def _formatter(self, handler=None, border=True, log_only=False, space=False):
         """Format log message"""
         console = f"| %(message)-{self.screen_width - 2}s |" if border else f"%(message)-{self.screen_width - 2}s"
-        file = f"{' '*65}" if space else "[%(asctime)s] %(filename)-27s %(levelname)-10s "
+        file = f"{' ' * 65}" if space else "[%(asctime)s] %(filename)-27s %(levelname)-10s "
         handlers = [handler] if handler else self._logger.handlers
         for h in handlers:
             if not log_only or isinstance(h, RotatingFileHandler):
@@ -88,7 +104,7 @@ class MyLogger:
 
     def add_main_handler(self):
         """Add main handler to logger"""
-        self.main_handler = self._get_handler(self.main_log, count=19)
+        self.main_handler = self._get_handler(self.main_log)
         self.main_handler.addFilter(fmt_filter)
         self._logger.addHandler(self.main_handler)
 

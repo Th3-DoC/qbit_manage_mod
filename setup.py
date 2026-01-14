@@ -1,7 +1,13 @@
 import os
 
-from distutils.core import setup
 from setuptools import find_packages
+from setuptools import setup
+
+# Read version from VERSION file
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")) as f:
+    version_str = f.read().strip()
+    # Get only the first part (without develop suffix)
+    version = version_str.rsplit("-", 1)[0]
 
 # User-friendly description from README.md
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -11,20 +17,19 @@ try:
 except Exception:
     long_description = ""
 
-try:
-    with open(os.path.join(current_directory, "VERSION"), encoding="utf-8") as f:
-        version_no = f.read()
-except Exception:
-    version_no = ""
-
 setup(
     # Name of the package
     name="qbit_manage",
     # Packages to include into the distribution
     packages=find_packages("."),
+    py_modules=["qbit_manage"],
+    package_data={
+        "modules": ["../web-ui/**/*", "../VERSION"],
+    },
+    include_package_data=True,
     # Start with a small number and increase it with
     # every change you make https://semver.org
-    version=version_no,
+    version=version,
     # Chose a license from here: https: //
     # help.github.com / articles / licensing - a -
     # repository. For example: MIT

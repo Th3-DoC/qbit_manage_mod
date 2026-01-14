@@ -1,8 +1,13 @@
 # Requirements Updated
-- qbittorrent-api==2024.1.58
+- "fastapi==0.122.0"
+- "qbittorrent-api==2025.11.1"
+- "ruff==0.14.6"
 
-# Updates
-- Adds arguments for mover script (Adds #473)
+# New Features
+- Adds max limit for unregistered torrent removal (New config option: `rem_unregistered_max_torrents`) (Fixes #975)
+- Adds tagging all private trackers (New config option: `private_tag`) (Fixes #883)
 
-Special thanks to @NooNameR for their contributions!
-**Full Changelog**: https://github.com/StuffAnThings/qbit_manage/compare/v4.0.7...v4.0.8
+# Bug Fixes
+- Fixes bug constantly updatingn share limits when using `upload_speed_on_limit_reached` (Fixes #959) (Thanks to @Seros)
+
+**Full Changelog**: https://github.com/StuffAnThings/qbit_manage/compare/v4.6.4...v4.6.5
