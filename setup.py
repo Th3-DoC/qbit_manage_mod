@@ -21,7 +21,7 @@ setup(
     # Name of the package
     name="qbit_manage_mod",
     # Packages to include into the distribution
-    packages=find_packages("."),
+    packages=find_packages(current_directory),
     py_modules=["qbit_manage"],
     package_data={
         "modules": ["../web-ui/**/*", "../VERSION"],
