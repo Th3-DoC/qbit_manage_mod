@@ -35,13 +35,16 @@ class Tags:
             tracker = self.qbt.get_tags(self.qbt.get_tracker_urls(torrent.trackers))
             tags_to_remove=[]
             tags_to_add=[]
-            #Add/Remove unique cat_tag if cat changed
+
+            #Add/Remove cat_tag if torrent in new category
             if (
                 self.config.settings["cat_tag"]
                 and "cat_tags" in self.config.data
                 and self.config.data["cat_tags"] is not None
             ):
                 for cat, tag in self.config.cat_tags.items():
+                    if cat == "" or tag == "":
+                        continue
                     if (
                         torrent.category != cat
                         and util.is_tag_in_torrent(tag, torrent.tags)
