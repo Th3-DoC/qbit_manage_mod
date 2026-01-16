@@ -183,6 +183,7 @@ class Config:
             "apprise": "apprise",
             "notifiarr": "notifiarr",
             "share_limits": "share_limits",
+            "cat_tags": "cat_tags",
         }
 
         # Ensure settings section exists
@@ -192,6 +193,10 @@ class Config:
         # Ensure cat section exists
         if "cat" not in self.data:
             self.data["cat"] = {}
+
+        # Ensure cat_tag section exists
+        if "cat_tags" not in self.data:
+            self.data["cat_tags"] = {}
 
         # Process each standard section
         for target_key, source_key in section_mappings.items():
@@ -347,6 +352,9 @@ class Config:
             ),
             "rem_unregistered_max_torrents": self.util.check_for_attribute(
                 self.data, "rem_unregistered_max_torrents", parent="settings", var_type="int", default=10, min_int=0
+            ),
+            "cat_tag": self.util.check_for_attribute(
+                self.data, "cat_tag", parent="settings", var_type="bool", default=False
             ),
         }
 
