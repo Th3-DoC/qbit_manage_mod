@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 # Dependencies are specified here for uv to use
 
 [project]
-name = "qbit_manage"
+name = "qbit_manage_mod"
 # Version is dynamically determined from setup.py
 dynamic = ["version"]
 description = "This tool will help manage tedious tasks in qBittorrent and automate them. Tag, categorize, remove Orphaned data, remove unregistered torrents and much much more."
@@ -14,7 +14,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
-    {name = "bobokun"},
+    {name = "Th3_DoC"},
 ]
 dependencies = [
     "argon2-cffi==25.1.0",
@@ -36,8 +36,8 @@ dependencies = [
 qbit-manage = "qbit_manage:main"
 
 [project.urls]
-Homepage = "https://github.com/StuffAnThings"
-Repository = "https://github.com/StuffAnThings/qbit_manage"
+Homepage = "https://github.com/Th3-DoC"
+Repository = "https://github.com/Th3-DoC/qbit_manage_mod"
 
 [project.optional-dependencies]
 dev = [
