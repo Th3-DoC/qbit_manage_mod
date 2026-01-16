@@ -1,0 +1,2 @@
+[console_scripts]
+qbit-manage = qbit_manage:main
