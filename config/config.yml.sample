@@ -51,6 +51,9 @@ settings:
   rem_unregistered_grace_minutes: 10 # Grace period (minutes) to skip removing newly added torrents when unregistered with the tracker (Default is 10)
   rem_unregistered_max_torrents: 10 # Maximum number of torrents to remove per tracker per run. (Default is 10)
 
+#MY EXTRA SETTINGS
+  cat_tag: False #Add unique tags to specified category's
+
 directory:
   # Do not remove these
   # root_dir var: </your/path/here/>  # Root downloads directory used to check for orphaned files, noHL, and RecycleBin.
@@ -65,28 +68,6 @@ directory:
   recycle_bin: "/path/to/.RecycleBin"
   torrents_dir: "/path/to/qbitAppData/BT_backup"
   orphaned_dir: "/path/to/orphaned_data"
-
-extra_settings:
-  cat_handle_dl: False  # Allow categories to handle downloads.
-  share_limit_handle_dl: False  # Allow share_limit_tags to handle downloads.
-  show_share_tag_priority: True  # Changes share_limits_tag from "~share_limit_999.GROUP" to "~share_limit.GROUP".
-  share_tag_in_group: True  # Keep share_limits_tag when moved to share_group
-  group_tag_suffix: ~share_group  # Begins group_tag with suffix "~share_group.group_name"
-# Moves all qBm paused torrents to a group_tag, helpful to prevent unwanted cleanup.
-  show_inactive_group: False
-  inactive_group_tag: qBmPausedTorrents
-# Choose to add torrents set by share_limits into a group_tag to shorten run time or remove unwanted tags.
-# Whether true/false torrents will still be managed as per there share_limit settings incl. tags
-
-# Current low seed count set by share_limits: min_num_seeds
-  show_min_seed_group: True
-  min_seed_group_tag: MinSeedsNotMet
-# Current Active Torrents set by share_limits: last_active
-  show_last_active_group: True
-  last_active_group_tag: LastActiveLimitNotReached
-# Current seeding torrents set by share_limits: min_seeding_time
-  show_min_seed_time_group: True
-  min_seed_time_group_tag: MinSeedTimeNotReached
 
 cat:
   # Category & Path Parameters
@@ -104,6 +85,10 @@ cat_change:
   CatA.cross-seed: CatA
   CatB.cross-seed: CatB
 
+#EDIT To add unique tags to specific categories
+cat_tags: #<category>: <tag>
+  someCategory: myTag
+
 tracker:
   # Mandatory
   # Tag Parameters
@@ -111,6 +96,7 @@ tracker:
   # <MANDATORY> Set tag name. Can be a list of tags or a single tag
   #   tag: <Tag Name>
   # <OPTIONAL> Set the category based on tracker URL. This category option takes priority over the category defined by save directory
+  # EDIT but will not overwrite existing category EDIT #
   #   cat: <Category Name>
   # <OPTIONAL> Set this to the notifiarr react name. This is used to add indexer reactions to the notifications sent by Notifiarr
   #   notifiarr: <notifiarr indexer>
