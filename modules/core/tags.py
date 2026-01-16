@@ -50,7 +50,7 @@ class Tags:
                     if (
                         torrent.category == cat
                         and not util.is_tag_in_torrent(tag, torrent.tags)
-                    )
+                    ):
                         tags_to_add.append(tag)
 
             # Remove stalled_tag if torrent is no longer stalled
