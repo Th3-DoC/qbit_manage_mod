@@ -19,7 +19,7 @@ except Exception:
 
 setup(
     # Name of the package
-    name="qbit_manage",
+    name="qbit_manage_mod",
     # Packages to include into the distribution
     packages=find_packages("."),
     py_modules=["qbit_manage"],
@@ -43,11 +43,11 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     # Your name
-    author="bobokun",
+    author="Th3_DoC",
     # Your email
     author_email="",
     # Either the link to your github or to your website
-    url="https://github.com/StuffAnThings",
+    url="https://github.com/Th3-DoC",
     # Link from which the project can be downloaded
-    download_url="https://github.com/StuffAnThings/qbit_manage",
+    download_url="https://github.com/Th3-DoC/qbit_manage_mod",
 )
