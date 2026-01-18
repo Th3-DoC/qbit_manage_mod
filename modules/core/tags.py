@@ -27,7 +27,7 @@ class Tags:
     def tags(self):
         """Update tags for torrents"""
         start_time = time.time()
-        logger.separator("Updating Tags", space=False, border=False)
+        logger.vis("Updatinng Tags", False, True, True, "<", ">", True, " ", True, "~", False, "INFO")
         torrent_list = self.qbt.torrent_list
         if self.hashes:
             torrent_list = self.qbt.get_torrents({"torrent_hashes": self.hashes})
@@ -35,6 +35,7 @@ class Tags:
             tracker = self.qbt.get_tags(self.qbt.get_tracker_urls(torrent.trackers))
             tags_to_remove=[]
             tags_to_add=[]
+            #body = []
 
             #Add/Remove cat_tag if torrent in new category
             if (
@@ -42,19 +43,19 @@ class Tags:
                 and "cat_tags" in self.config.data
                 and self.config.data["cat_tags"] is not None
             ):
-                for cat, tag in self.config.cat_tags.items():
-                    if cat == "" or tag == "":
+                for i, info in self.config.data["cat_tags"].items():
+                    if i is None or info is None:
                         continue
                     if (
-                        torrent.category != cat
-                        and util.is_tag_in_torrent(tag, torrent.tags)
+                        torrent.category not in info["cat"]
+                        and util.is_tag_in_torrent(info["custom_tag"], torrent.tags)
                     ):
-                        tags_to_remove.append(tag)
+                        tags_to_remove.append(info["custom_tag"])
                     if (
-                        torrent.category == cat
-                        and not util.is_tag_in_torrent(tag, torrent.tags)
+                        torrent.category in info["cat"]
+                        and not util.is_tag_in_torrent(info["custom_tag"], torrent.tags)
                     ):
-                        tags_to_add.append(tag)
+                        tags_to_add.append(info["custom_tag"])
 
             # Remove stalled_tag if torrent is no longer stalled
             if (
@@ -62,16 +63,13 @@ class Tags:
                 and util.is_tag_in_torrent(self.stalled_tag, torrent.tags)
                 and torrent.state != "stalledDL"
             ):
-                tags_to_remove.append(self.stalled_tag)
-                self.stat += len(tags_to_remove)
                 t_name = torrent.name
                 body = []
                 body += logger.print_line(logger.insert_space(f"Torrent Name: {t_name}", 3), self.config.loglevel)
-                body += logger.print_line(logger.insert_space(f"Removing Tag{'s' if len(tags_to_remove) > 1 else ''}: {', '.join(tags_to_remove)}", 8),
-                        self.config.loglevel)
+                body += logger.print_line(logger.insert_space(f"Removing Tag: {self.stalled_tag}", 3), self.config.loglevel)
                 body += logger.print_line(logger.insert_space(f"Tracker: {tracker['url']}", 8), self.config.loglevel)
                 if not self.config.dry_run:
-                    torrent.remove_tags(tags_to_remove)
+                    tags_to_remove.append(self.stalled_tag)
             if (
                 torrent.tags == ""
                 or not util.is_tag_in_torrent(tracker["tag"], torrent.tags)
@@ -85,9 +83,8 @@ class Tags:
                     and not util.is_tag_in_torrent(self.private_tag, torrent.tags)
                     and self.qbt.is_torrent_private(torrent)
                 )
-
             ):
-                tags_to_add.append(tracker["tag"].copy())
+                tags_to_add = tracker["tag"].copy()
                 if self.tag_stalled_torrents and torrent.state == "stalledDL":
                     tags_to_add.append(self.stalled_tag)
                 if self.private_tag and self.qbt.is_torrent_private(torrent):
@@ -117,19 +114,15 @@ class Tags:
                     }
                     self.notify_attr.append(attr)
                     self.torrents_updated.append(t_name)
-        if self.stats >= 1:
-            logger.print_line(
-                f"{'Did not update' if self.config.dry_run else 'Updated'} {self.stats} new tags.", self.config.loglevel
-            )
-        else:
-            logger.print_line("No new torrents to tag.", self.config.loglevel)
-        if self.stat >= 1:
-            logger.print_line(
-                f"{'Did not Remove' if self.config.dry_run else 'Removed'} {self.stat} tags.", self.config.loglevel
-            )
-        else:
-            logger.print_line("No Tags to Remove.", self.config.loglevel)
 
+        logger.vis("Tags Updated", False, True, True, "<", ">", True, " ", True, "~", False, "INFO")
+        if self.stats >= 1:
+            text = "Did not update" if self.config.dry_run else "Updated "+ str(self.stats) +" new tags."
+
+        else:
+            text = "No new torrents to tag."
+
+        logger.vis(text, True)
         end_time = time.time()
         duration = end_time - start_time
-        logger.debug(f"Tags command completed in {duration:.2f} seconds")
+        logger.vis(f"Tags command completed in {duration:.2f} seconds", True)

@@ -3,4 +3,6 @@ include LICENSE
 include VERSION
 include SUPPORTED_VERSIONS.json
 include qbit_manage.py
+include CI.yaml
 recursive-include web-ui *
+recursive-include config *.yaml

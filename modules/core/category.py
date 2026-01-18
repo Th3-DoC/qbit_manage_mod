@@ -1,4 +1,5 @@
 import time
+from os.path import join
 
 from modules import util
 from modules.qbit_error_handler import handle_qbit_api_errors
@@ -25,7 +26,7 @@ class Category:
     def category(self):
         """Update category for torrents that don't have any category defined and returns total number categories updated"""
         start_time = time.time()
-        logger.separator("Updating Categories", space=False, border=False)
+        logger.vis("Registering New Categories", False, True, True, "<", ">", True, " ", True, "~", False, "INFO")
         torrent_list_filter = {"status_filter": self.status_filter}
         if self.hashes:
             torrent_list_filter["torrent_hashes"] = self.hashes
@@ -34,7 +35,12 @@ class Category:
         torrent_list = self.qbt.get_torrents(torrent_list_filter)
         for torrent in torrent_list:
             torrent_category = torrent.category
-            new_cat = self.uncategorized_mapping
+            new_cat = []
+            new_cat.extend((self.get_tracker_cat(torrent) if torrent_category == ""
+                            or torrent_category == self.uncategorized_mapping
+                            else self.qbt.get_category(torrent.save_path)))
+            logger.debug(logger.insert_space(f"{torrent.name}: ", 3))
+            logger.debug(logger.insert_space(f"{torrent_category}: {new_cat[0]}", 5))
             if not torrent.auto_tmm and torrent_category:
                 logger.print_line(
                     f"{torrent.name} has Automatic Torrent Management disabled and already has the category"
@@ -42,32 +48,32 @@ class Category:
                     "DEBUG",
                 )
                 continue
-            if (self.get_tracker_cat(torrent) and torrent_category is None):
-                new_cat = self.get_tracker_cat(torrent)
-            else if self.qbt.get_category(torrent.save_path) is not None:
-                new_cat = self.qbt.get_category(torrent.save_path)
-            else if new_cat == self.uncategorized_mapping:
+            if new_cat[0] == self.uncategorized_mapping:
                 logger.print_line(f"{torrent.name} remains uncategorized.", "DEBUG")
                 continue
-            self.update_cat(torrent, new_cat, False)
+            if torrent_category not in new_cat:
+                logger.vis("Registering Torrent Cat", True, True, False, ">", "<")
+                logger.debug(logger.insert_space(f"{torrent_category} == {new_cat[0]}", 5))
+                self.update_cat(torrent, new_cat[0], False)
 
+        logger.vis("Categories Registered", False, False, False, ">", "<", True, " ", True, "~", False, "INFO")
         if self.stats >= 1:
-            logger.print_line(
-                f"{'Did not update' if self.config.dry_run else 'Updated'} {self.stats} new categories.", self.config.loglevel
-            )
+            stat_count = "Updated "+ str(self.stats) +" new categories."
+            if self.config.dry_run:
+                stat_count = "Did not update "+ str(self.stats) +" new categories."
         else:
-            logger.print_line("No new torrents to categorize.", self.config.loglevel)
-
+            stat_count = "No new torrents to categorize."
+        logger.vis(stat_count, True)
         end_time = time.time()
         duration = end_time - start_time
-        logger.debug(f"Category command completed in {duration:.2f} seconds")
+        logger.vis(f"Category command completed in {duration:.2f} seconds", True)
 
     def change_categories(self):
         """Handle category changes separately after main categorization"""
         if not self.config.cat_change:
             return
 
-        logger.separator("Changing Categories", space=False, border=False)
+        logger.vis("Changing Categories", False, True, True, "<", ">", True, " ", True, "~", False, "INFO")
         start_time = time.time()
 
         for torrent_category, updated_cat in self.config.cat_change.items():

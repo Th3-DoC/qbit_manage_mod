@@ -266,7 +266,7 @@ try:
     from git import Repo
 
     try:
-        git_branch = Repo(path=".").head.ref.name  # noqa
+        git_branch = Repo(path="").head.ref.name  # noqa
     except InvalidGitRepositoryError:
         git_branch = None
 except ImportError:

@@ -125,6 +125,9 @@ class MyLogger:
         if config_key in self.config_handlers:
             self._logger.removeHandler(self.config_handlers[config_key])
 
+    def centre(self, txt, sep=" ", side_space=True):
+        return self._centered(txt, sep, side_space)
+
     def _centered(self, text, sep=" ", side_space=True, left=False):
         """Center text"""
         if len(text) > self.screen_width - 2:
@@ -137,6 +140,51 @@ class MyLogger:
         side = int(space / 2) - 1
         final_text = f"{text}{sep * side}{sep * side}" if left else f"{sep * side}{text}{sep * side}"
         return final_text
+
+    def _center(self, text, sep=" ", sep_r=" ", sep_l=" ", side_space=False, left=False):
+        """Center text"""
+        if len(text) > self.screen_width - 2:
+            return text
+        space = self.screen_width - len(text) - 2
+        text = f"{' ' if side_space else sep}{text}{' ' if side_space else sep}"
+        if space % 2 == 1:
+            text += sep
+            space -= 1
+        side = int(space / 2) - 1
+        final_text = f"{text}{sep * side}{sep * side}" if left else f"{sep_l * side}{text}{sep_r * side}"
+        return final_text
+
+    def vis(self, text=None, centre=False, side_space=False, space=False, sep_l=None, sep_r=None, vis=False, sep=" ",
+            border=False, border_sep=" ", left=False, loglevel="INFO"):
+        """Format log entry's"""
+        if centre and sep == " ":
+            return self._center(text)
+        if centre and sep != " ":
+            return self._center(text, sep, sep_l, sep_r, side_space, left)
+        if vis:
+            return self._my_separator(text, sep, sep_r, sep_l, space, border, border_sep, side_space, left, loglevel)
+        if vis:
+            return self._my_separator(text, sep, sep_r, sep_l, space, border, border_sep, side_space, left, loglevel)
+        return text
+
+    def _my_separator(self, text=None, sep=" ", sep_r=" ", sep_l=" ", space=True, border=True, border_sep=" ", side_space=True, left=False, loglevel="INFO"):
+        """Print separator"""
+        sep_r = sep_r if space else self.separating_character
+        border_sep = self.separating_character if border_sep == " " else border_sep
+        for handler in self._logger.handlers:
+            self._formatter(handler, False)
+        border_text = f"|{border_sep * self.screen_width}|"
+        if border:
+            self.print_line(border_text, loglevel)
+        if text:
+            text_list = text.split("\n")
+            for txt in text_list:
+                self.print_line(f"|{sep_r}{self._centered(txt, sep, side_space, left)}{sep_l}|", loglevel)
+            if border:
+                self.print_line(border_text, loglevel)
+        for handler in self._logger.handlers:
+            self._formatter(handler)
+        return [text]
 
     def separator(self, text=None, space=True, border=True, side_space=True, left=False, loglevel="INFO"):
         """Print separator"""

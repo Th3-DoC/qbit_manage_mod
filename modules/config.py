@@ -71,6 +71,7 @@ class Config:
         self.process_config_settings()
         self.process_config_webhooks()
         self.cat_change = self.data["cat_change"] if "cat_change" in self.data else {}
+        self.process_config_cat_tags()
         self.process_config_apprise()
         self.process_config_notifiarr()
         self.process_config_all_webhooks()
@@ -177,13 +178,13 @@ class Config:
             "directory": "directory",
             "cat": "cat",
             "cat_change": "cat_change",
+            "cat_tags": "cat_tags",
             "nohardlinks": "nohardlinks",
             "recyclebin": "recyclebin",
             "orphaned": "orphaned",
             "apprise": "apprise",
             "notifiarr": "notifiarr",
             "share_limits": "share_limits",
-            "cat_tags": "cat_tags",
         }
 
         # Ensure settings section exists
@@ -197,6 +198,10 @@ class Config:
         # Ensure cat_tag section exists
         if "cat_tags" not in self.data:
             self.data["cat_tags"] = {}
+
+        # Ensure cat_tag section exists
+        if "cat_change" not in self.data:
+            self.data["cat_change"] = {}
 
         # Process each standard section
         for target_key, source_key in section_mappings.items():
@@ -356,6 +361,9 @@ class Config:
             "cat_tag": self.util.check_for_attribute(
                 self.data, "cat_tag", parent="settings", var_type="bool", default=False
             ),
+            "cat_update_handle_completed": self.util.check_for_attribute(
+                self.data, "cat_update_handle_completed", parent="settings", var_type="bool", default=True
+            ),
         }
 
         self.tracker_error_tag = self.settings["tracker_error_tag"]
@@ -512,6 +520,42 @@ class Config:
         else:
             if self.commands["tag_nohardlinks"]:
                 err = "Config Error: nohardlinks must be a list of categories"
+                self.notify(err, "Config")
+                raise Failed(err)
+
+    def process_config_cat_tags(self):
+        """
+        Process the cat_tags in configuration data.
+        This method ensures that all required settings are present and correctly formatted.
+        """
+        # cat_tags
+        self.cat_tags = None
+        if "cat_tags" in self.data and self.settings["cat_tag"] and self.data["cat_tags"] is not None:
+            self.cat_tags = {}
+            for i in self.data["cat_tags"]:
+                if isinstance(self.data["cat_tags"], list) and isinstance(i, str):
+                    self.cat_tags[i] = {"cat": [], "custom_tag": str}
+                    continue
+                if isinstance(i, dict):
+                    id_str = list(i.keys())[0]
+                elif isinstance(i, str):
+                    id_str = i
+                    i = self.data["cat_tags"]
+                if i[id_str] is None:
+                    i[id_str] = {}
+                self.cat_tags[id_str] = {
+                    "cat": i[id_str].get("cat", []),
+                    "custom_tag": i[id_str].get("custom_tag", True),
+                }
+                if self.cat_tags[id_str]["cat"] is None:
+                    self.cat_tags[id_str]["cat"] = []
+                if not isinstance(self.cat_tags[id_str]["custom_tags"], str):
+                    err = f"Config Error: cat_tags category {id_str} attribute custom_tag must be a str type"
+                    self.notify(err, "Config")
+                    raise Failed(err)
+        else:
+            if self.data.settings["cat_tag"]:
+                err = "Config Error: cat_tags must be a list of categories"
                 self.notify(err, "Config")
                 raise Failed(err)
 

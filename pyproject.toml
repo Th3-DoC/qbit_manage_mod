@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 # Keep using setup.py for version handling
@@ -8,9 +8,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "qbit_manage_mod"
 # Version is dynamically determined from setup.py
-dynamic = ["version"]
+dynamic = ["version", "readme"]
 description = "This tool will help manage tedious tasks in qBittorrent and automate them. Tag, categorize, remove Orphaned data, remove unregistered torrents and much much more."
-readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
@@ -32,18 +31,29 @@ dependencies = [
     "uvicorn==0.38.0",
 ]
 
-[project.scripts]
-qbit-manage = "qbit_manage:main"
-
-[project.urls]
-Homepage = "https://github.com/Th3-DoC"
-Repository = "https://github.com/Th3-DoC/qbit_manage_mod"
-
 [project.optional-dependencies]
 dev = [
     "pre-commit==4.3.0",
     "ruff==0.14.6",
 ]
+
+[tool.setuptools]
+packages = { find = {} }
+
+[tool.setuptools.dynamic]
+version = { file = ["VERSION"] }
+readme = { file = ["README.md"], content-type = "text/markdown" }
+
+[tool.setuptools.package-data]
+# If you actually need these files inside the wheel
+# Prefer MANIFEST.in if they are runtime data outside packages
+"*" = ["MANIFEST.in"]
+
+[project.scripts]
+qbit-manage = "qbit_manage:main"
+
+[project.urls]
+Repository = "https://github.com/Th3-DoC/qbit_manage_mod"
 
 [tool.ruff]
 line-length = 130
