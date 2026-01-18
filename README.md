@@ -1,14 +1,14 @@
-# <img src="https://github.com/StuffAnThings/qbit_manage/blob/master/icons/qbm_logo.png?raw=true" width="75"> qBit Manage
+# <img src="https://github.com/Th3-DoC/qbit_manage_mod/blob/master/icons/qbm_logo.png?raw=true" width="75"> qBit Manage
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/StuffAnThings/qbit_manage?style=plastic)](https://github.com/StuffAnThings/qbit_manage/releases)
-[![GitHub commits since latest release (by SemVer)](https://img.shields.io/github/commits-since/StuffAnThings/qbit_manage/latest/develop?label=Commits%20in%20Develop&style=plastic)](https://github.com/StuffAnThings/qbit_manage/tree/develop)
-[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/bobokun/qbit_manage?label=docker&sort=semver&style=plastic)](https://hub.docker.com/r/bobokun/qbit_manage)
-[![PyPi (latest semver)](https://img.shields.io/pypi/v/qbit-manage?label=PyPI&sort=semver&style=plastic)](https://pypi.org/project/qbit-manage)
-[![Github Workflow Status](https://img.shields.io/github/actions/workflow/status/StuffAnThings/qbit_manage/version.yml?style=plastic)](https://github.com/StuffAnThings/qbit_manage/actions/workflows/version.yml)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/StuffAnThings/qbit_manage/master.svg)](https://results.pre-commit.ci/latest/github/StuffAnThings/qbit_manage/master)
-[![Ghcr packages](https://img.shields.io/badge/ghcr.io-packages?style=plastic&label=packages)](https://ghcr.io/StuffAnThings/qbit_manage)
-[![Docker Pulls](https://img.shields.io/docker/pulls/bobokun/qbit_manage?style=plastic)](https://hub.docker.com/r/bobokun/qbit_manage)
-[![Sponsor or Donate](https://img.shields.io/badge/-Sponsor_or_Donate-blueviolet?style=plastic)](https://github.com/sponsors/bobokun)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Th3-DoC/qbit_manage_mod?style=plastic)](https://github.com/Th3-DoC/qbit_manage_mod/releases)
+[![GitHub commits since latest release (by SemVer)](https://img.shields.io/github/commits-since/Th3-DoC/qbit_manage_mod/latest/develop?label=Commits%20in%20Develop&style=plastic)](https://github.com/Th3-DoC/qbit_manage_mod/tree/develop)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/th3-doc/qbit_manage_mod?label=docker&sort=semver&style=plastic)](https://hub.docker.com/r/th3-doc/qbit_manage_mod)
+[![PyPi (latest semver)](https://img.shields.io/pypi/v/qbit-manage-mod?label=PyPI&sort=semver&style=plastic)](https://pypi.org/project/qbit-manage-mod)
+[![Github Workflow Status](https://img.shields.io/github/actions/workflow/status/Th3-DoC/qbit_manage_mod/version.yml?style=plastic)](https://github.com/Th3-DoC/qbit_manage_mod/actions/workflows/version.yml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/Th3-DoC/qbit_manage_mod/master.svg)](https://results.pre-commit.ci/latest/github/Th3-DoC/qbit_manage_mod/master)
+[![Ghcr packages](https://img.shields.io/badge/ghcr.io-packages?style=plastic&label=packages)](https://ghcr.io/th3-doc/qbit_manage_mod)
+[![Docker Pulls](https://img.shields.io/docker/pulls/th3-doc/qbit_manage_mod?style=plastic)](https://hub.docker.com/r/th3-doc/qbit_manage_mod)
+[![Sponsor or Donate](https://img.shields.io/badge/-Sponsor_or_Donate-blueviolet?style=plastic)](https://github.com/sponsors/Th3-DoC)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 This is a program used to manage your qBittorrent instance such as:
@@ -33,23 +33,23 @@ Generally expect new releases of Qbittorrent to not immediately be supported. Su
 
 ### Master
 
-![master - qBittorrent version](https://img.shields.io/badge/dynamic/json?label=master%20-%20qBittorrent&query=master.qbit&url=https%3A%2F%2Fraw.githubusercontent.com%2FStuffAnThings%2Fqbit_manage%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=brightgreen)
+![master - qBittorrent version](https://img.shields.io/badge/dynamic/json?label=master%20-%20qBittorrent&query=master.qbit&url=https%3A%2F%2Fraw.githubusercontent.com%2FTh3-DoC%2Fqbit_manage_mod%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=brightgreen)
 
-![master - qbittorrent-api version](https://img.shields.io/badge/dynamic/json?label=master%20-%20qbittorrent-api&query=master.qbitapi&url=https%3A%2F%2Fraw.githubusercontent.com%2FStuffAnThings%2Fqbit_manage%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=blue)
+![master - qbittorrent-api version](https://img.shields.io/badge/dynamic/json?label=master%20-%20qbittorrent-api&query=master.qbitapi&url=https%3A%2F%2Fraw.githubusercontent.com%2FTh3-DoC%2Fqbit_manage_mod%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=blue)
 
 ### Develop
 
-![develop - qBittorrent version](https://img.shields.io/badge/dynamic/json?label=develop%20-%20qBittorrent&query=develop.qbit&url=https%3A%2F%2Fraw.githubusercontent.com%2FStuffAnThings%2Fqbit_manage%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=brightgreen)
+![develop - qBittorrent version](https://img.shields.io/badge/dynamic/json?label=develop%20-%20qBittorrent&query=develop.qbit&url=https%3A%2F%2Fraw.githubusercontent.com%2FTh3-DoC%2Fqbit_manage_mod%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=brightgreen)
 
-![develop - qbittorrent-api version](https://img.shields.io/badge/dynamic/json?label=develop%20-%20qbittorrent-api&query=develop.qbitapi&url=https%3A%2F%2Fraw.githubusercontent.com%2FStuffAnThings%2Fqbit_manage%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=blue)
+![develop - qbittorrent-api version](https://img.shields.io/badge/dynamic/json?label=develop%20-%20qbittorrent-api&query=develop.qbitapi&url=https%3A%2F%2Fraw.githubusercontent.com%2FTh3-DoC%2Fqbit_manage_mod%2Fdevelop%2FSUPPORTED_VERSIONS.json&color=blue)
 
 ## Getting Started
 
-Check out the [wiki](https://github.com/StuffAnThings/qbit_manage/wiki) for installation help
+Check out the [wiki](https://github.com/Th3-DoC/qbit_manage_mod/wiki) for installation help
 
-1. Install qbit_manage either by installing Python 3.9.0+ on the localhost and following the [Local Installation](https://github.com/StuffAnThings/qbit_manage/wiki/Local-Installations) Guide or by installing Docker and following the [Docker Installation](https://github.com/StuffAnThings/qbit_manage/wiki/Docker-Installation) Guide or the [unRAID Installation](https://github.com/StuffAnThings/qbit_manage/wiki/Unraid-Installation) Guide.
-1. Once installed, you have to [set up your Configuration](https://github.com/StuffAnThings/qbit_manage/wiki/Config-Setup) by create a [Configuration File](https://github.com/StuffAnThings/qbit_manage/blob/master/config/config.yml.sample) filled with all your values to connect to your qBittorrent instance.
-1. Please refer to the list of [Commands](https://github.com/StuffAnThings/qbit_manage/wiki/Commands) that can be used with this tool.
+1. Install qbit_manage either by installing Python 3.9.0+ on the localhost and following the [Local Installation](https://github.com/Th3-DoC/qbit_manage_mod/wiki/Local-Installations) Guide or by installing Docker and following the [Docker Installation](https://github.com/Th3-DoC/qbit_manage_mod/wiki/Docker-Installation) Guide or the [unRAID Installation](https://github.com/Th3-DoC/qbit_manage_mod/wiki/Unraid-Installation) Guide.
+1. Once installed, you have to [set up your Configuration](https://github.com/Th3-DoC/qbit_manage_mod/wiki/Config-Setup) by create a [Configuration File](https://github.com/Th3-DoC/qbit_manage_mod/blob/master/config/config.yml.sample) filled with all your values to connect to your qBittorrent instance.
+1. Please refer to the list of [Commands](https://github.com/Th3-DoC/qbit_manage_mod/wiki/Commands) that can be used with this tool.
 
 ## Usage
 
@@ -62,6 +62,6 @@ python qbit_manage.py -h
 ## Support
 
 * If you have any questions or require support please join the [Notifiarr Discord](https://discord.com/invite/AURf8Yz) and post your question under the `qbit-manage` channel.
-* If you're getting an Error or have an Enhancement post in the [Issues](https://github.com/StuffAnThings/qbit_manage/issues/new).
-* If you have a configuration question post in the [Discussions](https://github.com/StuffAnThings/qbit_manage/discussions/new).
-* Pull Request are welcome but please submit them to the [develop branch](https://github.com/StuffAnThings/qbit_manage/tree/develop).
+* If you're getting an Error or have an Enhancement post in the [Issues](https://github.com/Th3-DoC/qbit_manage_mod/issues/new).
+* If you have a configuration question post in the [Discussions](https://github.com/Th3-DoC/qbit_manage_mod/discussions/new).
+* Pull Request are welcome but please submit them to the [develop branch](https://github.com/Th3-DoC/qbit_manage_mod/tree/develop).

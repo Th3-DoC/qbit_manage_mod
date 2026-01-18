@@ -2,7 +2,7 @@ name: 'Docs Request for an Update or Improvement'
 description: A request to update or improve Qbit Manage documentation
 title: '[Docs]: '
 labels: ['documentation']
-assignees: 'bobokun'
+assignees: 'Th3-DoC'
 
 body:
   - type: textarea
@@ -20,6 +20,6 @@ body:
   - type: input
     attributes:
       label: Does the docs page already exist? Please link to it.
-      description: 'Example: https://github.com/StuffAnThings/qbit_manage/wiki/existingpagehere'
+      description: 'Example: https://github.com/Th3-DoC/qbit_manage_mod/wiki/existingpagehere'
     validations:
       required: false

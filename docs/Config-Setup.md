@@ -18,7 +18,7 @@ The script looks for the configuration file in different locations depending on 
 
 You can override the default location by using the `--config-dir` or `-cd` command line option to specify a custom directory.
 
-A template Configuration File can be found in the repo [config/config.yml.sample](https://github.com/StuffAnThings/qbit_manage/blob/master/config/config.yml.sample).
+A template Configuration File can be found in the repo [config/config.yml.sample](https://github.com/Th3-DoC/qbit_manage_mod/blob/master/config/config.yml.sample).
 
 You can reference environment variables inside your `config.yml` by `!ENV VAR_NAME`
 
@@ -27,7 +27,7 @@ You can reference environment variables inside your `config.yml` by `!ENV VAR_NA
 
 # Config File
 
-## [Config Sample File](https://github.com/StuffAnThings/qbit_manage/blob/master/config/config.yml.sample)
+## [Config Sample File](https://github.com/Th3-DoC/qbit_manage_mod/blob/master/config/config.yml.sample)
 
 # **List of variables**
 

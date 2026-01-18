@@ -343,7 +343,7 @@ prep-release:
 	echo "# Bug Fixes" >> CHANGELOG; \
 	echo "" >> CHANGELOG; \
 	echo "" >> CHANGELOG; \
-	echo "**Full Changelog**: https://github.com/StuffAnThings/qbit_manage/compare/v$$prev_version...v$$new_version" >> CHANGELOG; \
+	echo "**Full Changelog**: https://github.com/Th3-DoC/qbit_manage_mod/compare/v$$prev_version...v$$new_version" >> CHANGELOG; \
 	echo "✓ CHANGELOG prepared for release $$new_version"
 	@echo ""
 	@echo "REMINDER: Update the CHANGELOG contents with actual improvements and bug fixes before making the release."

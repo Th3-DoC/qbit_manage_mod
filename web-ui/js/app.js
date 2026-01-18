@@ -140,10 +140,10 @@ class QbitManageApp {
                     // Determine the correct URL based on branch
                     let updateUrl;
                     if (response.branch === 'develop') {
-                        updateUrl = 'https://github.com/StuffAnThings/qbit_manage/actions/workflows/develop.yml';
+                        updateUrl = 'https://github.com/Th3-DoC/qbit_manage_mod/actions/workflows/develop.yml';
                     } else {
                         // For stable releases, link to the release page
-                        updateUrl = `https://github.com/StuffAnThings/qbit_manage/releases/tag/v${latest}`;
+                        updateUrl = `https://github.com/Th3-DoC/qbit_manage_mod/releases/tag/v${latest}`;
                     }
                     badge.href = updateUrl;
 
@@ -1241,7 +1241,7 @@ class QbitManageApp {
                     </ul>
                     <h3 class="help-title">Need More Help?</h3>
                     <p>For more detailed documentation and support, please visit the
-                        <a href="https://github.com/StuffAnThings/qbit_manage/wiki" target="_blank" rel="noopener noreferrer">
+                        <a href="https://github.com/Th3-DoC/qbit_manage_mod/wiki" target="_blank" rel="noopener noreferrer">
                             Official GitHub Repository
                         </a>.
                     </p>

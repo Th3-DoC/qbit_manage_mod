@@ -18,7 +18,7 @@ python qbit_manage.py --web-server --host 0.0.0.0 --port 8080
 version: "3"
 services:
   qbit_manage:
-    image: bobokun/qbit_manage:latest
+    image: ghcr.io/th3-doc/qbit_manage_mod:latest
     container_name: qbit_manage
     environment:
       - QBT_WEB_SERVER=true # Enable web server (set to false to disable)

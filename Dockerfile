@@ -40,12 +40,12 @@ LABEL org.opencontainers.image.description="This tool will help manage tedious t
 LABEL org.opencontainers.image.version="$APP_VERSION"
 LABEL org.opencontainers.image.created="$BUILD_DATE"
 LABEL org.opencontainers.image.revision="$VCS_REF"
-LABEL org.opencontainers.image.authors="bobokun"
-LABEL org.opencontainers.image.vendor="StuffAnThings"
+LABEL org.opencontainers.image.authors="Th3-DoC"
+LABEL org.opencontainers.image.vendor="Th3-DoC"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.url="https://github.com/StuffAnThings/qbit_manage"
-LABEL org.opencontainers.image.documentation="https://github.com/StuffAnThings/qbit_manage/wiki"
-LABEL org.opencontainers.image.source="https://github.com/StuffAnThings/qbit_manage"
+LABEL org.opencontainers.image.url="https://github.com/Th3-DoC/qbit_manage_mod"
+LABEL org.opencontainers.image.documentation="https://github.com/Th3-DoC/qbit_manage_mod/wiki"
+LABEL org.opencontainers.image.source="https://github.com/Th3-DoC/qbit_manage_mod"
 LABEL org.opencontainers.image.base.name="python:3.13-alpine"
 
 ENV TINI_VERSION=v0.19.0
