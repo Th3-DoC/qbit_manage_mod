@@ -36,8 +36,10 @@ class Tags:
             tags_to_remove=[]
             tags_to_add=[]
             #body = []
+            tracker2 = tracker["tags"].copy()
 
-            #Add/Remove cat_tag if torrent in new category
+            ## #FIX# Needs evaluation, it might have been the issie with tracker[tags]
+            ## #Add/Remove cat_tag if torrent in new category
             if (
                 self.config.settings["cat_tag"]
                 and "cat_tags" in self.config.data
@@ -56,7 +58,10 @@ class Tags:
                         and not util.is_tag_in_torrent(info["custom_tag"], torrent.tags)
                     ):
                         tags_to_add.append(info["custom_tag"])
+            ## #FIX# ENDS
 
+
+            ## #CLEANUP Copy paste from master, working now but variable need confirmion
             # Remove stalled_tag if torrent is no longer stalled
             if (
                 self.tag_stalled_torrents

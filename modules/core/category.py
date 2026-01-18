@@ -1,5 +1,4 @@
 import time
-from os.path import join
 
 from modules import util
 from modules.qbit_error_handler import handle_qbit_api_errors

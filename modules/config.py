@@ -32,7 +32,7 @@ COMMANDS = [
     "skip_qb_version_check",
     "dry_run",
 ]
-
+python
 
 class Config:
     """Config class for qBittorrent-Manage"""
@@ -469,6 +469,42 @@ class Config:
                     logger.error(err)
                 logger.info(f"Notifiarr Connection {'Failed' if self.notifiarr_factory is None else 'Successful'}")
 
+    def process_config_cat_tags(self):
+        """
+        Process the cat_tags in configuration data.
+        This method ensures that all required settings are present and correctly formatted.
+        """
+        # cat_tags
+        self.cat_tags = None
+        if "cat_tags" in self.data and self.settings["cat_tag"] and self.data["cat_tags"] is not None:
+            self.cat_tags = {}
+            for i in self.data["cat_tags"]:
+                if isinstance(self.data["cat_tags"], list) and isinstance(i, str):
+                    self.cat_tags[i] = {"cat": [], "custom_tag": str}
+                    continue
+                if isinstance(i, dict):
+                    id_str = list(i.keys())[0]
+                elif isinstance(i, str):
+                    id_str = i
+                    i = self.data["cat_tags"]
+                if i[id_str] is None:
+                    i[id_str] = {}
+                self.cat_tags[id_str] = {
+                    "cat": i[id_str].get("cat", []),
+                    "custom_tag": i[id_str].get("custom_tag", str),
+                }
+                if self.cat_tags[id_str]["cat"] is None:
+                    self.cat_tags[id_str]["cat"] = []
+                if not isinstance(self.cat_tags[id_str]["custom_tag"], str):
+                    err = f"Config Error: cat_tags category {id_str} attribute custom_tag must be a str type"
+                    self.notify(err, "Config")
+                    raise Failed(err)
+        else:
+            if self.data.settings["cat_tag"]:
+                err = "Config Error: cat_tags must be a list of categories"
+                self.notify(err, "Config")
+                raise Failed(err)
+
     def process_config_all_webhooks(self):
         """
         Process all the webhooks configuration data for any type of webhook.
@@ -520,42 +556,6 @@ class Config:
         else:
             if self.commands["tag_nohardlinks"]:
                 err = "Config Error: nohardlinks must be a list of categories"
-                self.notify(err, "Config")
-                raise Failed(err)
-
-    def process_config_cat_tags(self):
-        """
-        Process the cat_tags in configuration data.
-        This method ensures that all required settings are present and correctly formatted.
-        """
-        # cat_tags
-        self.cat_tags = None
-        if "cat_tags" in self.data and self.settings["cat_tag"] and self.data["cat_tags"] is not None:
-            self.cat_tags = {}
-            for i in self.data["cat_tags"]:
-                if isinstance(self.data["cat_tags"], list) and isinstance(i, str):
-                    self.cat_tags[i] = {"cat": [], "custom_tag": str}
-                    continue
-                if isinstance(i, dict):
-                    id_str = list(i.keys())[0]
-                elif isinstance(i, str):
-                    id_str = i
-                    i = self.data["cat_tags"]
-                if i[id_str] is None:
-                    i[id_str] = {}
-                self.cat_tags[id_str] = {
-                    "cat": i[id_str].get("cat", []),
-                    "custom_tag": i[id_str].get("custom_tag", True),
-                }
-                if self.cat_tags[id_str]["cat"] is None:
-                    self.cat_tags[id_str]["cat"] = []
-                if not isinstance(self.cat_tags[id_str]["custom_tags"], str):
-                    err = f"Config Error: cat_tags category {id_str} attribute custom_tag must be a str type"
-                    self.notify(err, "Config")
-                    raise Failed(err)
-        else:
-            if self.data.settings["cat_tag"]:
-                err = "Config Error: cat_tags must be a list of categories"
                 self.notify(err, "Config")
                 raise Failed(err)
 
