@@ -1,8 +1,8 @@
 # Docker Installation
 
 A simple Dockerfile is available in this repo if you'd like to build it yourself.
-The official build on github is available [here](https://ghcr.io/StuffAnThings/qbit_manage): <br>
-`docker run -it -v <PATH_TO_CONFIG>:/config:rw ghcr.io/stuffanthings/qbit_manage:latest`
+The official build on github is available [here](https://ghcr.io/th3-doc/qbit_manage_mod): <br>
+`docker run -it -v <PATH_TO_CONFIG>:/config:rw ghcr.io/th3-doc/qbit_manage_mod:latest`
 
 * The -v <PATH_TO_CONFIG>:/config:rw mounts the location you choose as a persistent volume to store your files.
   * Change <PATH_TO_CONFIG> to a folder where your config.yml and other files are.
@@ -19,7 +19,7 @@ The official build on github is available [here](https://ghcr.io/StuffAnThings/q
       2. The config file needs to drill down (if required) further to the desired root dir.
 * `remote_dir`: is not required and can be commented out with `#`
 
-Please see [Commands](https://github.com/StuffAnThings/qbit_manage/wiki/Commands) for a list of arguments and docker environment variables.
+Please see [Commands](https://github.com/Th3-DoC/qbit_manage_mod/wiki/Commands) for a list of arguments and docker environment variables.
 
 Here is an example of a docker compose
 
@@ -28,7 +28,7 @@ version: "3.7"
 services:
   qbit_manage:
     container_name: qbit_manage
-    image: ghcr.io/stuffanthings/qbit_manage:latest
+    image: ghcr.io/th3-doc/qbit_manage_mod:latest
     volumes:
       - /mnt/user/appdata/qbit_manage/:/config:rw
       - /mnt/user/data/torrents/:/data/torrents:rw

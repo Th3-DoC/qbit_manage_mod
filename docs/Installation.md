@@ -37,19 +37,19 @@ Perfect for server environments, automation, or users who prefer command-line to
 ## Desktop App Installation
 
 ### Windows
-1. Download `qbit-manage-*-desktop-installer-setup.exe` from the [releases page](https://github.com/StuffAnThings/qbit_manage/releases)
+1. Download `qbit-manage-*-desktop-installer-setup.exe` from the [releases page](https://github.com/Th3-DoC/qbit_manage_mod/releases)
 2. Run the installer and follow the setup wizard
 3. Launch qbit_manage from the Start Menu or desktop shortcut
 4. The app will automatically create the configuration directory and files
 
 ### macOS
-1. Download `qbit-manage-*-desktop-installer.dmg` from the [releases page](https://github.com/StuffAnThings/qbit_manage/releases)
+1. Download `qbit-manage-*-desktop-installer.dmg` from the [releases page](https://github.com/Th3-DoC/qbit_manage_mod/releases)
 2. Open the DMG file and drag qbit_manage to your Applications folder
 3. Launch qbit_manage from Applications (you may need to allow it in System Preferences > Security & Privacy)
 4. The app will automatically create the configuration directory and files
 
 ### Linux
-1. Download `qbit-manage-*-desktop-installer.deb` from the [releases page](https://github.com/StuffAnThings/qbit_manage/releases)
+1. Download `qbit-manage-*-desktop-installer.deb` from the [releases page](https://github.com/Th3-DoC/qbit_manage_mod/releases)
 2. Install using your package manager:
    ```bash
    sudo dpkg -i qbit-manage-*-desktop-installer.deb
@@ -61,7 +61,7 @@ Perfect for server environments, automation, or users who prefer command-line to
 ## Standalone Binary Installation
 
 ### Windows
-1. Download `qbit-manage-windows-amd64.exe` from the [releases page](https://github.com/StuffAnThings/qbit_manage/releases)
+1. Download `qbit-manage-windows-amd64.exe` from the [releases page](https://github.com/Th3-DoC/qbit_manage_mod/releases)
 2. Place the executable in a directory of your choice (e.g., `C:\Program Files\qbit-manage\`)
 3. Add the directory to your PATH environment variable (optional)
 4. Run from Command Prompt or PowerShell:
@@ -70,7 +70,7 @@ Perfect for server environments, automation, or users who prefer command-line to
    ```
 
 ### macOS
-1. Download the appropriate binary from the [releases page](https://github.com/StuffAnThings/qbit_manage/releases):
+1. Download the appropriate binary from the [releases page](https://github.com/Th3-DoC/qbit_manage_mod/releases):
    - `qbit-manage-macos-arm64` for Apple Silicon Macs (M1, M2, M3, etc.)
    - `qbit-manage-macos-x86_64` for Intel Macs
 2. Make the binary executable:
@@ -87,7 +87,7 @@ Perfect for server environments, automation, or users who prefer command-line to
    ```
 
 ### Linux
-1. Download `qbit-manage-linux-amd64` from the [releases page](https://github.com/StuffAnThings/qbit_manage/releases)
+1. Download `qbit-manage-linux-amd64` from the [releases page](https://github.com/Th3-DoC/qbit_manage_mod/releases)
 2. Make the binary executable:
    ```bash
    chmod +x qbit-manage-linux-amd64
@@ -115,16 +115,16 @@ For developers or users who want to modify the code, you can install from source
 # Install uv first
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install qbit-manage
-uv tool install qbit-manage
+# Install qbit-manage-mod
+uv tool install qbit-manage-mod
 ```
 
 ### Method 2: Install from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/StuffAnThings/qbit_manage.git
-cd qbit_manage
+git clone https://github.com/Th3-DoC/qbit_manage_mod.git
+cd qbit_manage_mod
 
 # Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -168,8 +168,8 @@ For development work or to contribute to the project:
 
 ```bash
 # Clone the repository
-git clone https://github.com/StuffAnThings/qbit_manage.git
-cd qbit_manage
+git clone https://github.com/Th3-DoC/qbit_manage_mod.git
+cd qbit_manage_mod
 
 # Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -187,12 +187,12 @@ uv pip install -e .
 
 **Tool installation:**
 ```bash
-uv tool upgrade qbit-manage
+uv tool upgrade qbit-manage-mod
 ```
 
 **Development installation:**
 ```bash
-cd qbit_manage
+cd qbit_manage_mod
 git pull
 uv pip install -e . --upgrade
 ```

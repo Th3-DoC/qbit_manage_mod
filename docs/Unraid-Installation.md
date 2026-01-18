@@ -35,7 +35,7 @@ Install [Community Applications](https://forums.unraid.net/topic/38582-plug-in-c
 
 5. **Create Configuration File**
    - Navigate to `/mnt/user/appdata/qbit_manage/` on your Unraid server
-   - Download the [sample config file](https://github.com/StuffAnThings/qbit_manage/blob/master/config/config.yml.sample)
+   - Download the [sample config file](https://github.com/Th3-DoC/qbit_manage_mod/blob/master/config/config.yml.sample)
    - Rename it to `config.yml` (remove the `.sample` extension)
    - Edit the file according to the [Config Setup guide](Config-Setup)
 

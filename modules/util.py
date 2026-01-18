@@ -478,7 +478,7 @@ def get_master():
 def get_version(level):
     try:
         # Always fetch fresh; bust caches and disable intermediaries
-        url = f"https://raw.githubusercontent.com/StuffAnThings/qbit_manage/refs/heads/{level}/VERSION"
+        url = f"https://raw.githubusercontent.com/Th3-DoC/qbit_manage_mod/refs/heads/{level}/VERSION"
         params = {"ts": int(time.time())}
         headers = {
             "Cache-Control": "no-cache",
@@ -1132,7 +1132,7 @@ class CheckHardLinks:
                 logger.trace(f"Checking no of hard links: {os.stat(file).st_nlink}")
                 logger.trace(f"Checking inode_count dict: {self.inode_count.get(os.stat(file).st_ino)}")
                 logger.trace(f"ignore_root_dir: {ignore_root_dir}")
-                # https://github.com/StuffAnThings/qbit_manage/issues/291 for more details
+                # https://github.com/Th3-DoC/qbit_manage_mod/issues/291 for more details
                 if has_hardlinks(self, file, ignore_root_dir):
                     logger.trace(f"Hardlinks found in {file}.")
                     check_for_hl = False
